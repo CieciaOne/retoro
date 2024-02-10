@@ -1,7 +1,6 @@
 mod config;
 mod error;
 mod retoro;
-pub mod utils;
 
 use config::Config;
 use retoro::Retoro;
@@ -17,7 +16,6 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::new_from_file("./config.json").await?;
 
     let mut retoro = Retoro::new(config).await?;
-    retoro.setup_bootnodes().await?;
     retoro.run().await?;
 
     Ok(())

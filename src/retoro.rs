@@ -12,6 +12,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::{io, io::AsyncBufReadExt, select};
+use tracing::debug;
+use tracing::error;
 
 pub struct Retoro {
     swarm: Swarm<RetoroBehaviour>,
@@ -94,15 +96,13 @@ impl Retoro {
             .try_for_each(|node| self.swarm.dial(node.clone()))?)
     }
     pub async fn run(&mut self) -> Result<(), RetoroError> {
+        self.setup_bootnodes().await?;
         // Read full lines from stdin
         let mut stdin = io::BufReader::new(io::stdin()).lines();
         let listen_addr_quic = self.config.get_quic_addrs();
         let listen_addr_tcp = self.config.get_tcp_addrs();
         self.swarm.listen_on(listen_addr_tcp)?;
         self.swarm.listen_on(listen_addr_quic)?;
-
-        // let relay_addr = Multiaddr::from_str("/ip4/18.196.133.23/tcp/5511")?;
-        // Setup bootnodes
 
         // Create a Gossipsub topic
         let topic = gossipsub::IdentTopic::new("test-net");
@@ -115,19 +115,19 @@ impl Retoro {
                     if let Err(e) = self.swarm
                         .behaviour_mut().gossipsub
                         .publish(topic.clone(), line.as_bytes()) {
-                        println!("Publish error: {e:?}");
+                        error!("Publish error: {e:?}");
                     }
                 }
                 event = self.swarm.select_next_some() => match event {
                     SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
                         for (peer_id, _multiaddr) in list {
-                            println!("mDNS discovered a new peer: {peer_id}");
+                            debug!("mDNS discovered a new peer: {peer_id}");
                             self.swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                         }
                     },
                     SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
                         for (peer_id, _multiaddr) in list {
-                            println!("mDNS discover peer has expired: {peer_id}");
+                            debug!("mDNS discover peer has expired: {peer_id}");
                             self.swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
                         }
                     },
@@ -135,20 +135,20 @@ impl Retoro {
                             info: identify::Info { observed_addr, .. },
                             ..
                         })) => {
-                            println!("Observed new peer {}",observed_addr.clone());
+                            debug!("Observed new peer {}",observed_addr.clone());
                             self.swarm.add_external_address(observed_addr.clone());
 
                         },
                     SwarmEvent::Behaviour(RetoroBehaviourEvent::Gossipsub(gossipsub::Event::Message {
                         propagation_source: peer_id,
-                        message_id: id,
+                        message_id: _,
                         message,
-                    })) => println!(
-                            "Got message: '{}' with id: {id} from peer: {peer_id}",
+                    })) => debug!(
+                            "Message from {peer_id}: {}",
                             String::from_utf8_lossy(&message.data),
                         ),
                     SwarmEvent::NewListenAddr { address, .. } => {
-                        println!("Local node is listening on {address}");
+                        debug!("Local node is listening on {address}");
                     }
                     _ => {}
                 }

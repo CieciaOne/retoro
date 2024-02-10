@@ -23,16 +23,9 @@ impl Config {
         let mut file = File::open(path).await?;
         let mut content = String::new();
         file.read_to_string(&mut content).await?;
-
-        debug!("read file contents: \n{}", content);
         let config: Config = serde_json::from_str(&content)?;
-
         debug!("parsed config: \n{:?}", config);
         Ok(config)
-    }
-
-    pub async fn new_from_url(url: &str) -> Result<Self, RetoroError> {
-        todo!("implement fetching config from web");
     }
 
     pub fn get_tcp_addrs(&self) -> Multiaddr {
@@ -57,13 +50,5 @@ impl Config {
     pub fn get_bootnodes(&self) -> Vec<Multiaddr> {
         debug!("got bootnodes: {:?}", self.bootnodes);
         self.bootnodes.clone()
-    }
-
-    pub fn default() -> Self {
-        Self {
-            use_ipv6: false,
-            port: 5511,
-            bootnodes: vec![],
-        }
     }
 }
