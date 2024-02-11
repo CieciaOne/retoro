@@ -1,9 +1,11 @@
 use crate::config;
 use crate::error;
 
+use chrono::Utc;
 use config::Config;
 use error::RetoroError;
 use futures::stream::StreamExt;
+use libp2p::dcutr;
 use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
@@ -41,6 +43,8 @@ impl Retoro {
                 // To content-address message, we can take the hash of message and use it as an ID.
                 let message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
+                    let timestamp = Utc::now().timestamp_micros();
+                    timestamp.hash(&mut s);
                     message.data.hash(&mut s);
                     message.topic.hash(&mut s);
                     message.source.hash(&mut s);
@@ -62,6 +66,8 @@ impl Retoro {
 
                 let relay = relay::Behaviour::new(key.public().to_peer_id(), Default::default());
 
+                let dcutr = dcutr::Behaviour::new(key.public().to_peer_id());
+
                 let ping = ping::Behaviour::new(ping::Config::new());
 
                 let identify = identify::Behaviour::new(identify::Config::new(
@@ -77,6 +83,7 @@ impl Retoro {
                     gossipsub,
                     mdns,
                     relay,
+                    dcutr,
                     identify,
                     ping,
                 })
@@ -163,6 +170,7 @@ struct RetoroBehaviour {
     gossipsub: gossipsub::Behaviour,
     mdns: mdns::tokio::Behaviour,
     relay: relay::Behaviour,
+    dcutr: dcutr::Behaviour,
     identify: identify::Behaviour,
     ping: ping::Behaviour,
 }
