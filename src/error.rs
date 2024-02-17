@@ -36,9 +36,3 @@ pub enum RetoroError {
         source: serde_json::Error,
     },
 }
-
-// impl From<TransportError<std::io::Error>> for RetoroError {
-//     fn from(error: TransportError<std::io::Error>) -> Self {
-//         RetoroError::Transport(error.to_string())
-//     }
-// }
