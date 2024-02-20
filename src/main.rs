@@ -1,5 +1,6 @@
 mod config;
 mod error;
+mod profile;
 mod retoro;
 
 use config::Config;
