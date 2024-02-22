@@ -1,5 +1,7 @@
 use crate::config;
 use crate::error;
+use crate::message;
+use crate::message::Message;
 use crate::profile::Profile;
 
 use chrono::Utc;
@@ -7,7 +9,6 @@ use config::Config;
 use error::RetoroError;
 use futures::stream::StreamExt;
 use libp2p::dcutr;
-use libp2p::identity::Keypair;
 use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
@@ -15,7 +16,6 @@ use libp2p::{identify, ping, Swarm};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
-use tokio::fs;
 use tokio::{io, io::AsyncBufReadExt, select};
 use tracing::debug;
 use tracing::error;
@@ -23,25 +23,21 @@ use tracing::error;
 pub struct Retoro {
     swarm: Swarm<RetoroBehaviour>,
     config: Config,
-    profile: Profile,
+    profile: Profile
 }
 
 impl Retoro {
-    pub async fn new(config: Config) -> Result<Self, RetoroError> {
-        // TODO:
-        // this needs to be changed to work more like a builder pattern, 
-        // current version doesn't make much sense
-        let profile = Retoro::load_profile(&config).await?;
-
+    pub async fn new(config: Config, profile: Profile) -> Result<Self, RetoroError> {
+        let swarm = Retoro::swarm(&profile).await?;
         Ok(Self {
-            swarm: Retoro::swarm(&profile).await?,
+            swarm,
             config,
-            profile,
+            profile
         })
     }
 
     async fn swarm(profile: &Profile) -> Result<Swarm<RetoroBehaviour>, RetoroError> {
-        let swarm = libp2p::SwarmBuilder::with_existing_identity(profile.keypair())
+        let swarm = libp2p::SwarmBuilder::with_existing_identity(profile.keypair()?)
             .with_tokio()
             .with_tcp(
                 tcp::Config::default(),
@@ -105,7 +101,7 @@ impl Retoro {
         Ok(swarm)
     }
 
-    pub async fn setup_bootnodes(&mut self) -> Result<(), RetoroError> {
+    pub async fn dial_known_nodes(&mut self) -> Result<(), RetoroError> {
         Ok(self
             .config
             .get_bootnodes()
@@ -113,26 +109,8 @@ impl Retoro {
             .try_for_each(|node| self.swarm.dial(node.clone()))?)
     }
 
-    pub async fn load_profile(config: &Config) -> Result<Profile, RetoroError> {
-        let name = config.get_name();
-        let path = config.get_pem_file_path();
-
-        if let (Some(name), Some(path)) = (name, path) {
-            let pem = fs::read(path).await?;
-
-            let key = openssl::pkey::PKey::private_key_from_pem(&pem).unwrap();
-            let mut key_bytes = key.raw_private_key().unwrap();
-            let keypair = Keypair::ed25519_from_bytes(&mut key_bytes)?;
-
-            debug!("public key: \n{:?}", keypair.public());
-            Ok(Profile::new_from_keypair(name, keypair))
-        } else {
-            Err(RetoroError::InvalidProfile)
-        }
-    }
-
     pub async fn run(&mut self) -> Result<(), RetoroError> {
-        self.setup_bootnodes().await?;
+        self.dial_known_nodes().await?;
         // Read full lines from stdin as temporary measure for testing
         let mut stdin = io::BufReader::new(io::stdin()).lines();
         let listen_addr_quic = self.config.get_quic_addrs();
@@ -146,9 +124,13 @@ impl Retoro {
         loop {
             select! {
                 Ok(Some(line)) = stdin.next_line() => {
+                    let name = self.profile.name();
+                    let pk = self.profile.keypair()?.public();
+                    let message = Message::new(name,pk.to_peer_id(),line);
+                    let bytes = bincode::serialize(&message).unwrap();
                     if let Err(e) = self.swarm
                         .behaviour_mut().gossipsub
-                        .publish(topic.clone(), line.as_bytes()) {
+                        .publish(topic.clone(), bytes) {
                         error!("Publish error: {e:?}");
                     }
                 }

@@ -4,6 +4,7 @@ use libp2p::identity::DecodingError;
 use libp2p::noise::Error as NoiseError;
 use libp2p::TransportError;
 use libp2p::{gossipsub::SubscriptionError, swarm::DialError};
+use openssl::error::ErrorStack;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -47,6 +48,11 @@ pub enum RetoroError {
     Utf8 {
         #[from]
         source: Utf8Error,
+    },
+    #[error("failed managing keys: {source}")]
+    OpenSSL {
+        #[from]
+        source: ErrorStack,
     },
     #[error("invalid profile")]
     InvalidProfile,
