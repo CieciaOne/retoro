@@ -37,7 +37,7 @@ pub enum RetoroError {
     #[error("failed parsing config")]
     ConfigParse {
         #[from]
-        source: serde_json::Error,
+        source: toml::de::Error,
     },
     #[error("failed decoding keys: {source}")]
     Decoding {

@@ -9,7 +9,10 @@ use uuid::Uuid;
 pub struct Message {
     id: Uuid,
     author_name: String,
-    #[serde(serialize_with = "serialize_peer_id", deserialize_with = "deserialize_peer_id")]
+    #[serde(
+        serialize_with = "serialize_peer_id",
+        deserialize_with = "deserialize_peer_id"
+    )]
     author_id: PeerId,
     content: String,
     timestamp: i64,
@@ -32,7 +35,6 @@ where
     let bytes = serde::Deserialize::deserialize(deserializer)?;
     PeerId::from_bytes(bytes).map_err(D::Error::custom)
 }
-
 
 impl Message {
     pub fn new(author_name: String, author_id: PeerId, content: String) -> Self {

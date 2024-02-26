@@ -23,7 +23,7 @@ use tracing::error;
 pub struct Retoro {
     swarm: Swarm<RetoroBehaviour>,
     config: Config,
-    profile: Profile
+    profile: Profile,
 }
 
 impl Retoro {
@@ -32,7 +32,7 @@ impl Retoro {
         Ok(Self {
             swarm,
             config,
-            profile
+            profile,
         })
     }
 

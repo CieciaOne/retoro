@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, Ipv6Addr};
 use tracing::debug;
 
-use tokio::{fs::File, io::AsyncReadExt};
-
 use crate::error::RetoroError;
+use std::fs::read_to_string;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -26,11 +25,9 @@ struct NodeConfig {
 }
 
 impl Config {
-    pub async fn new_from_file(path: &str) -> Result<Self, RetoroError> {
-        let mut file = File::open(path).await?;
-        let mut content = String::new();
-        file.read_to_string(&mut content).await?;
-        let config: Config = serde_json::from_str(&content)?;
+    pub fn new_from_file(path: &str) -> Result<Self, RetoroError> {
+        let content = read_to_string(path)?;
+        let config: Config = toml::from_str(&content)?;
         debug!("parsed config: \n{:?}", config);
         Ok(config)
     }

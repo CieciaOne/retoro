@@ -1,7 +1,7 @@
 mod config;
 mod error;
-mod profile;
 mod message;
+mod profile;
 mod retoro;
 
 use config::Config;
@@ -16,7 +16,7 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .try_init();
 
-    let config = Config::new_from_file("./config.json").await?;
+    let config = Config::new_from_file("./config.toml")?;
     let profile = Profile::load_from_config(&config).await?;
 
     // test writing pem file
