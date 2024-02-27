@@ -1,14 +1,16 @@
 use crate::config::Config;
 use crate::error::RetoroError;
-use libp2p::{identity::Keypair, PeerId};
+use libp2p::{identity::Keypair, Multiaddr, PeerId};
 use openssl::pkey::{PKey, Private};
 use tokio::fs;
 
+type Name = String;
+
 #[derive(Clone, Debug)]
 pub struct Profile {
-    name: String,
+    name: Name,
     key: PKey<Private>,
-    known_users: Vec<PeerId>,
+    known_users: Vec<UserProfile>,
     known_networks: Vec<String>,
 }
 
@@ -56,7 +58,7 @@ impl Profile {
         self.name.to_owned()
     }
 
-    pub fn known_users(&self) -> &[PeerId] {
+    pub fn known_users(&self) -> &[UserProfile] {
         &self.known_users
     }
 
@@ -68,6 +70,13 @@ impl Profile {
         let mut key_bytes = self.key.raw_private_key()?;
         Ok(Keypair::ed25519_from_bytes(&mut key_bytes)?)
     }
+}
+
+#[derive(Clone, Debug)]
+struct UserProfile {
+    names: Vec<Name>,
+    id: PeerId,
+    nodes: Vec<Multiaddr>,
 }
 
 #[cfg(test)]
