@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::error::RetoroError;
 use libp2p::{identity::Keypair, Multiaddr, PeerId};
 use openssl::pkey::{PKey, Private};
-use tokio::fs;
+use std::fs;
 
 type Name = String;
 
@@ -31,8 +31,8 @@ impl Profile {
         Ok(Profile::new_from_key(name, key))
     }
 
-    async fn read_key_from_file(path: &str) -> Result<PKey<Private>, RetoroError> {
-        let pem = fs::read(path).await?;
+    fn read_key_from_file(path: &str) -> Result<PKey<Private>, RetoroError> {
+        let pem = fs::read(path)?;
         Ok(openssl::pkey::PKey::private_key_from_pem(&pem)?)
     }
 
@@ -41,16 +41,16 @@ impl Profile {
         let path = config.get_pem_file_path();
 
         if let (Some(name), Some(path)) = (name, path) {
-            let key = Profile::read_key_from_file(&path).await?;
+            let key = Profile::read_key_from_file(&path)?;
             Ok(Profile::new_from_key(name, key))
         } else {
             Err(RetoroError::InvalidProfile)
         }
     }
 
-    pub async fn write_key_to_file(&self, path: &str) -> Result<(), RetoroError> {
+    pub fn write_key_to_file(&self, path: &str) -> Result<(), RetoroError> {
         let pem = self.key.private_key_to_pem_pkcs8()?;
-        fs::write(path, pem).await?;
+        fs::write(path, pem)?;
         Ok(())
     }
 

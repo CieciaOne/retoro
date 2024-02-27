@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
 
     // test writing pem file
     let alt_profile = Profile::new("Krzyś".to_string())?;
-    alt_profile.write_key_to_file("alt_profile.pem").await?;
+    alt_profile.write_key_to_file("alt_profile.pem")?;
 
     let mut retoro = Retoro::new(config, profile).await?;
     retoro.run().await?;
