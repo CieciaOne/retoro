@@ -36,7 +36,7 @@ impl Profile {
         Ok(openssl::pkey::PKey::private_key_from_pem(&pem)?)
     }
 
-    pub async fn load_from_config(config: &Config) -> Result<Profile, RetoroError> {
+    pub fn load_from_config(config: &Config) -> Result<Profile, RetoroError> {
         let name = config.get_name();
         let path = config.get_pem_file_path();
 

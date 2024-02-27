@@ -17,11 +17,7 @@ async fn main() -> anyhow::Result<()> {
         .try_init();
 
     let config = Config::new_from_file("./config.toml")?;
-    let profile = Profile::load_from_config(&config).await?;
-
-    // test writing pem file
-    let alt_profile = Profile::new("Krzyś".to_string())?;
-    alt_profile.write_key_to_file("alt_profile.pem")?;
+    let profile = Profile::load_from_config(&config)?;
 
     let mut retoro = Retoro::new(config, profile).await?;
     retoro.run().await?;
