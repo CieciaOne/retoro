@@ -1,7 +1,9 @@
 use crate::config::Config;
 use crate::error::RetoroError;
+use crate::utils::{deserialize_peer_id, serialize_peer_id};
 use libp2p::{identity::Keypair, Multiaddr, PeerId};
 use openssl::pkey::{PKey, Private};
+use serde::{Deserialize, Serialize};
 use std::fs;
 
 type Name = String;
@@ -72,9 +74,13 @@ impl Profile {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct UserProfile {
     names: Vec<Name>,
+    #[serde(
+        serialize_with = "serialize_peer_id",
+        deserialize_with = "deserialize_peer_id"
+    )]
     id: PeerId,
     nodes: Vec<Multiaddr>,
 }

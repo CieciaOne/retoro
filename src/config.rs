@@ -1,7 +1,7 @@
 use libp2p::{multiaddr::Protocol, Multiaddr};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, Ipv6Addr};
-use tracing::debug;
 
 use crate::error::RetoroError;
 use std::fs::read_to_string;

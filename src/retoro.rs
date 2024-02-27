@@ -1,6 +1,5 @@
 use crate::config;
 use crate::error;
-use crate::message;
 use crate::message::Message;
 use crate::profile::Profile;
 
@@ -13,12 +12,12 @@ use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
 use libp2p::{identify, ping, Swarm};
+use log::debug;
+use log::error;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::{io, io::AsyncBufReadExt, select};
-use tracing::debug;
-use tracing::error;
 
 pub struct Retoro {
     swarm: Swarm<RetoroBehaviour>,
