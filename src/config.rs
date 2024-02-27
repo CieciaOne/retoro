@@ -90,20 +90,19 @@ mod tests {
                 profile_name: Some("profile".to_string()),
             },
         };
-        let ser_cfg = serde_json::to_string(&cfg).unwrap();
+        let ser_cfg = toml::to_string(&cfg).unwrap();
 
-        let c = "{
-            \"profile\": {
-                \"profile_name\": \"profile\",
-                \"pem_file\": \"./privatekey.pem\"
-            },
-            \"node\":{
-                \"bootnodes\": [],
-                \"use_ipv6\": false,
-                \"port\": 5511
-            }
-        }";
-        let a: Config = serde_json::from_str(c).unwrap();
+        let c = "
+            [profile]
+            profile_name = \"profile\"
+            pem_file = \"privatekey.pem\"
+
+            [node]
+            bootnodes = []
+            use_ipv6 = false
+            port = 5511
+        ";
+        let a: Config = toml::from_str(c).unwrap();
 
         dbg!(ser_cfg);
         dbg!(a);
