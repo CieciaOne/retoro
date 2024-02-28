@@ -3,6 +3,6 @@ profile_name = ""
 pem_file = ""
 
 [node]
-bootnodes = []
-use_ipv6 = false
+bootnodes = []          # List of nodes used at startup to setup communications
+interface_mode = "Both" # Allowed values are Both IpV4 & IpV6
 port = 5511

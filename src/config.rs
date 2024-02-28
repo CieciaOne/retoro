@@ -9,15 +9,24 @@ use std::fs::read_to_string;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     /// Configuration section related to profile
+    /// It is only prividing the most basic information
     profile: ProfileConfig,
     /// Configuration section related to node
+    /// It specifies the
     node: NodeConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum InterfaceMode {
+    IpV4,
+    IpV6,
+    Both,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct NodeConfig {
     /// Determine wehter to listen on ipv6 or ipv4 loopback address, the default is ipv4
-    use_ipv6: bool,
+    interface_mode: InterfaceMode,
     /// The port used to listen on all interfaces
     port: u16,
     /// Bootnode list
@@ -28,31 +37,38 @@ impl Config {
     pub fn new_from_file(path: &str) -> Result<Self, RetoroError> {
         let content = read_to_string(path)?;
         let config: Config = toml::from_str(&content)?;
-        debug!("parsed config: \n{:?}", config);
+        debug!("parsed config: \n{:#?}", config);
         Ok(config)
     }
 
-    pub fn get_tcp_addrs(&self) -> Multiaddr {
-        Multiaddr::empty()
-            .with(match self.node.use_ipv6 {
-                true => Protocol::from(Ipv6Addr::UNSPECIFIED),
-                false => Protocol::from(Ipv4Addr::UNSPECIFIED),
-            })
-            .with(Protocol::Tcp(self.node.port))
-    }
+    pub fn get_addrs(&self) -> Vec<Multiaddr> {
+        let interfaces = match self.node.interface_mode {
+            InterfaceMode::IpV6 => vec![Protocol::from(Ipv6Addr::UNSPECIFIED)],
+            InterfaceMode::IpV4 => vec![Protocol::from(Ipv4Addr::UNSPECIFIED)],
+            InterfaceMode::Both => vec![
+                Protocol::from(Ipv4Addr::UNSPECIFIED),
+                Protocol::from(Ipv6Addr::UNSPECIFIED),
+            ],
+        };
 
-    pub fn get_quic_addrs(&self) -> Multiaddr {
-        Multiaddr::empty()
-            .with(match self.node.use_ipv6 {
-                true => Protocol::from(Ipv6Addr::UNSPECIFIED),
-                false => Protocol::from(Ipv4Addr::UNSPECIFIED),
-            })
-            .with(Protocol::Udp(self.node.port))
-            .with(Protocol::QuicV1)
+        let mut addrs = vec![];
+        interfaces.into_iter().for_each(|p| {
+            addrs.push(
+                Multiaddr::empty()
+                    .with(p.clone())
+                    .with(Protocol::Tcp(self.node.port)),
+            );
+            addrs.push(
+                Multiaddr::empty()
+                    .with(p)
+                    .with(Protocol::Udp(self.node.port))
+                    .with(Protocol::QuicV1),
+            );
+        });
+        addrs
     }
 
     pub fn get_bootnodes(&self) -> Vec<Multiaddr> {
-        debug!("got bootnodes: {:?}", self.node.bootnodes);
         self.node.bootnodes.clone()
     }
 
@@ -82,7 +98,7 @@ mod tests {
         let cfg = Config {
             node: NodeConfig {
                 bootnodes: vec![],
-                use_ipv6: false,
+                interface_mode: InterfaceMode::IpV4,
                 port: 1,
             },
             profile: ProfileConfig {
@@ -99,7 +115,7 @@ mod tests {
 
             [node]
             bootnodes = []
-            use_ipv6 = false
+            interface_mode = \"IpV4\"
             port = 5511
         ";
         let a: Config = toml::from_str(c).unwrap();

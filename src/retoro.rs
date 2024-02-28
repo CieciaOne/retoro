@@ -112,10 +112,14 @@ impl Retoro {
         self.dial_known_nodes().await?;
         // Read full lines from stdin as temporary measure for testing
         let mut stdin = io::BufReader::new(io::stdin()).lines();
-        let listen_addr_quic = self.config.get_quic_addrs();
-        let listen_addr_tcp = self.config.get_tcp_addrs();
-        self.swarm.listen_on(listen_addr_tcp)?;
-        self.swarm.listen_on(listen_addr_quic)?;
+
+        let addrs = self.config.get_addrs();
+        addrs.into_iter().try_for_each(|addr| {
+            self.swarm
+                .listen_on(addr)
+                .map(|_| ())
+                .map_err(|e| RetoroError::Transport { source: e })
+        })?;
 
         let topic = gossipsub::IdentTopic::new("test-net");
         self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
