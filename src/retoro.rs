@@ -1,5 +1,7 @@
 use crate::config;
 use crate::error;
+use crate::message::Message;
+use crate::profile::Profile;
 
 use chrono::Utc;
 use config::Config;
@@ -10,28 +12,31 @@ use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
 use libp2p::{identify, ping, Swarm};
+use log::debug;
+use log::error;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::{io, io::AsyncBufReadExt, select};
-use tracing::debug;
-use tracing::error;
 
 pub struct Retoro {
     swarm: Swarm<RetoroBehaviour>,
     config: Config,
+    profile: Profile,
 }
 
 impl Retoro {
-    pub async fn new(config: Config) -> Result<Self, RetoroError> {
+    pub async fn new(config: Config, profile: Profile) -> Result<Self, RetoroError> {
+        let swarm = Retoro::swarm(&profile).await?;
         Ok(Self {
-            swarm: Retoro::swarm().await?,
+            swarm,
             config,
+            profile,
         })
     }
 
-    async fn swarm() -> Result<Swarm<RetoroBehaviour>, RetoroError> {
-        let swarm = libp2p::SwarmBuilder::with_new_identity()
+    async fn swarm(profile: &Profile) -> Result<Swarm<RetoroBehaviour>, RetoroError> {
+        let swarm = libp2p::SwarmBuilder::with_existing_identity(profile.keypair()?)
             .with_tokio()
             .with_tcp(
                 tcp::Config::default(),
@@ -95,33 +100,40 @@ impl Retoro {
         Ok(swarm)
     }
 
-    pub async fn setup_bootnodes(&mut self) -> Result<(), RetoroError> {
+    pub async fn dial_known_nodes(&mut self) -> Result<(), RetoroError> {
         Ok(self
             .config
             .get_bootnodes()
             .iter()
             .try_for_each(|node| self.swarm.dial(node.clone()))?)
     }
-    pub async fn run(&mut self) -> Result<(), RetoroError> {
-        self.setup_bootnodes().await?;
-        // Read full lines from stdin
-        let mut stdin = io::BufReader::new(io::stdin()).lines();
-        let listen_addr_quic = self.config.get_quic_addrs();
-        let listen_addr_tcp = self.config.get_tcp_addrs();
-        self.swarm.listen_on(listen_addr_tcp)?;
-        self.swarm.listen_on(listen_addr_quic)?;
 
-        // Create a Gossipsub topic
+    pub async fn run(&mut self) -> Result<(), RetoroError> {
+        self.dial_known_nodes().await?;
+        // Read full lines from stdin as temporary measure for testing
+        let mut stdin = io::BufReader::new(io::stdin()).lines();
+
+        let addrs = self.config.get_addrs();
+        addrs.into_iter().try_for_each(|addr| {
+            self.swarm
+                .listen_on(addr)
+                .map(|_| ())
+                .map_err(|e| RetoroError::Transport { source: e })
+        })?;
+
         let topic = gossipsub::IdentTopic::new("test-net");
-        // subscribes to our topic
         self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
 
         loop {
             select! {
                 Ok(Some(line)) = stdin.next_line() => {
+                    let name = self.profile.name();
+                    let pk = self.profile.keypair()?.public();
+                    let message = Message::new(name,pk.to_peer_id(),line);
+                    let bytes = bincode::serialize(&message).unwrap();
                     if let Err(e) = self.swarm
                         .behaviour_mut().gossipsub
-                        .publish(topic.clone(), line.as_bytes()) {
+                        .publish(topic.clone(), bytes) {
                         error!("Publish error: {e:?}");
                     }
                 }
@@ -164,7 +176,6 @@ impl Retoro {
     }
 }
 
-// We create a custom network behaviour that combines Gossipsub and Mdnd with Relay.
 #[derive(NetworkBehaviour)]
 struct RetoroBehaviour {
     gossipsub: gossipsub::Behaviour,
