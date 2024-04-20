@@ -102,12 +102,11 @@ impl Retoro {
     }
 
     pub async fn dial_known_nodes(&mut self) -> Result<(), RetoroError> {
-        Ok(self
-            .config
+        self.config
             .get_bootnodes()
             .iter()
             .try_for_each(|node| self.swarm.dial(node.clone()))
-            .map_err(|e| RetoroError::Swarm(format!("Failed dialing known nodes: {e}")))?)
+            .map_err(|e| RetoroError::Swarm(format!("Failed dialing known nodes: {e}")))
     }
 
     pub async fn run(&mut self) -> Result<(), RetoroError> {
