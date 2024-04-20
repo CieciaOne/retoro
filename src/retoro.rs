@@ -42,7 +42,8 @@ impl Retoro {
                 tcp::Config::default(),
                 noise::Config::new,
                 yamux::Config::default,
-            )?
+            )
+            .map_err(|e| RetoroError::Swarm(format!("Failed building swarm: {e}")))?
             .with_quic()
             .with_behaviour(|key| {
                 // To content-address message, we can take the hash of message and use it as an ID.
@@ -105,7 +106,8 @@ impl Retoro {
             .config
             .get_bootnodes()
             .iter()
-            .try_for_each(|node| self.swarm.dial(node.clone()))?)
+            .try_for_each(|node| self.swarm.dial(node.clone()))
+            .map_err(|e| RetoroError::Swarm(format!("Failed dialing known nodes: {e}")))?)
     }
 
     pub async fn run(&mut self) -> Result<(), RetoroError> {
@@ -118,11 +120,15 @@ impl Retoro {
             self.swarm
                 .listen_on(addr)
                 .map(|_| ())
-                .map_err(|e| RetoroError::Transport { source: e })
+                .map_err(|e| RetoroError::Swarm(format!("Failed running the swarm: {e}")))
         })?;
 
         let topic = gossipsub::IdentTopic::new("test-net");
-        self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
+        self.swarm
+            .behaviour_mut()
+            .gossipsub
+            .subscribe(&topic)
+            .map_err(|e| RetoroError::Swarm(format!("Failed subscribing to topic: {e}")))?;
 
         loop {
             select! {

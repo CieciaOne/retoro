@@ -28,6 +28,7 @@ impl Profile {
     }
 
     /// Creates a new profile from provided name while generating key
+    #[allow(unused)]
     pub fn new(name: String) -> Result<Self, RetoroError> {
         let mut rng = OsRng;
         let key = Keys::generate(&mut rng);
@@ -48,14 +49,20 @@ impl Profile {
         let name = config.get_name();
         let path = config.get_pem_file_path();
 
-        if let (Some(name), Some(path)) = (name, path) {
-            let key = Profile::read_key_from_file(&path)?;
-            Ok(Profile::new_from_key(name, key))
-        } else {
-            Err(RetoroError::InvalidProfile)
+        if name.is_empty() {
+            return Err(RetoroError::Profile("Missing name in config".to_string()));
         }
+        if path.is_empty() {
+            return Err(RetoroError::Profile(
+                "Missing pem file path in config".to_string(),
+            ));
+        }
+
+        let key = Profile::read_key_from_file(&path)?;
+        Ok(Profile::new_from_key(name, key))
     }
 
+    #[allow(unused)]
     pub fn write_key_to_file(&self, path: &str) -> Result<(), RetoroError> {
         use ed25519_dalek::pkcs8::spki::der::pem::LineEnding;
         match self.key.write_pkcs8_pem_file(path, LineEnding::CR) {
@@ -70,22 +77,26 @@ impl Profile {
         self.name.to_owned()
     }
 
+    #[allow(unused)]
     pub fn known_users(&self) -> &[UserProfile] {
         &self.known_users
     }
 
+    #[allow(unused)]
     pub fn known_networks(&self) -> &[String] {
         &self.known_networks
     }
 
     pub fn keypair(&self) -> Result<Keypair, RetoroError> {
         let mut key_bytes = self.key.to_bytes();
-        Ok(Keypair::ed25519_from_bytes(&mut key_bytes)?)
+        let keypair = Keypair::ed25519_from_bytes(&mut key_bytes)
+            .map_err(|e| RetoroError::Keypair(format!("Failed decoding keypair: {e}")))?;
+        Ok(keypair)
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct UserProfile {
+pub struct UserProfile {
     names: Vec<Name>,
     #[serde(
         serialize_with = "serialize_peer_id",
@@ -110,7 +121,8 @@ mod test {
         let mut rng = OsRng;
         let key = Keys::generate(&mut rng);
         let mut key_bytes = key.to_bytes();
-        let keypair = Keypair::ed25519_from_bytes(&mut key_bytes)?;
+        let keypair = Keypair::ed25519_from_bytes(&mut key_bytes)
+            .map_err(|e| RetoroError::Keypair(format!("Failed generating the keypair {e}")))?;
         let name = "Somename".to_string();
         let user = Profile::new_from_key(name, key.clone());
 

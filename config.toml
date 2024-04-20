@@ -1,6 +1,6 @@
 [profile]
-profile_name = ""
-pem_file = ""
+profile_name = "Adrian"
+pem_file = "private.pem"
 
 [node]
 bootnodes = []          # List of nodes used at startup to setup communications
