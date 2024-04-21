@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::utils::{deserialize_peer_id, serialize_peer_id};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Message {
     id: Uuid,
     author_name: String,

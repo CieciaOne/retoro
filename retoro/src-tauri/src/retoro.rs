@@ -1,6 +1,9 @@
 use crate::config;
 use crate::error;
 use crate::message::Message;
+use crate::network::Network;
+use crate::network::NetworkSubscriptionFilter;
+use crate::network::NetworkType;
 use crate::profile::Profile;
 
 use chrono::Utc;
@@ -8,12 +11,14 @@ use config::Config;
 use error::RetoroError;
 use futures::stream::StreamExt;
 use libp2p::dcutr;
+use libp2p::gossipsub::IdentityTransform;
 use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
 use libp2p::{identify, ping, Swarm};
 use log::debug;
 use log::error;
+use log::info;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
@@ -65,9 +70,11 @@ impl Retoro {
                     .build()?;
 
                 // build a gossipsub network behaviour
-                let gossipsub = gossipsub::Behaviour::new(
+                let gossipsub = gossipsub::Behaviour::new_with_subscription_filter(
                     gossipsub::MessageAuthenticity::Signed(key.clone()),
                     gossipsub_config,
+                    None,
+                    NetworkSubscriptionFilter,
                 )?;
 
                 let relay = relay::Behaviour::new(key.public().to_peer_id(), Default::default());
@@ -109,6 +116,22 @@ impl Retoro {
             .map_err(|e| RetoroError::Swarm(format!("Failed dialing known nodes: {e}")))
     }
 
+    pub fn connect_public(&mut self, network: Network) -> Result<bool, RetoroError> {
+        let topic = gossipsub::IdentTopic::new(network.name());
+
+        info!("Connecting to {0}[{topic}]", network.name());
+        match network.network_type() {
+            NetworkType::Public => self
+                .swarm
+                .behaviour_mut()
+                .gossipsub
+                .subscribe(&topic)
+                .map_err(|e| RetoroError::Swarm(format!("Failed subscribing to topic: {e}"))),
+            NetworkType::Protected(_) => todo!(),
+            NetworkType::Private(_) => todo!(),
+        }
+    }
+
     pub async fn run(&mut self) -> Result<(), RetoroError> {
         self.dial_known_nodes().await?;
         // Read full lines from stdin as temporary measure for testing
@@ -122,12 +145,15 @@ impl Retoro {
                 .map_err(|e| RetoroError::Swarm(format!("Failed running the swarm: {e}")))
         })?;
 
-        let topic = gossipsub::IdentTopic::new("test-net");
-        self.swarm
-            .behaviour_mut()
-            .gossipsub
-            .subscribe(&topic)
-            .map_err(|e| RetoroError::Swarm(format!("Failed subscribing to topic: {e}")))?;
+        let main_net = gossipsub::IdentTopic::new("main");
+        let known_nets = self.profile.known_networks();
+
+        known_nets
+            .into_iter()
+            .for_each(|net| match self.connect_public(net) {
+                Ok(_) => {}
+                Err(e) => error!("{e}"),
+            });
 
         loop {
             select! {
@@ -138,7 +164,7 @@ impl Retoro {
                     let bytes = bincode::serialize(&message).unwrap();
                     if let Err(e) = self.swarm
                         .behaviour_mut().gossipsub
-                        .publish(topic.clone(), bytes) {
+                        .publish(main_net.clone(), bytes) {
                         error!("Publish error: {e:?}");
                     }
                 }
@@ -183,7 +209,7 @@ impl Retoro {
 
 #[derive(NetworkBehaviour)]
 struct RetoroBehaviour {
-    gossipsub: gossipsub::Behaviour,
+    gossipsub: gossipsub::Behaviour<IdentityTransform, NetworkSubscriptionFilter>,
     mdns: mdns::tokio::Behaviour,
     relay: relay::Behaviour,
     dcutr: dcutr::Behaviour,

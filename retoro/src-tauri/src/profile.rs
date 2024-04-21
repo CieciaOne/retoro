@@ -1,6 +1,9 @@
+use std::collections::HashSet;
+
 use crate::config::Config;
 use crate::error::RetoroError;
-use crate::utils::{deserialize_peer_id, serialize_peer_id};
+use crate::network::{Network, NetworkType};
+use crate::utils::{deserialize_peer_id, serialize_peer_id, MAIN_NET};
 use ed25519_dalek::{pkcs8::DecodePrivateKey, pkcs8::EncodePrivateKey, SigningKey};
 use libp2p::{identity::Keypair, Multiaddr, PeerId};
 use rand::rngs::OsRng;
@@ -12,18 +15,29 @@ type Keys = SigningKey;
 pub struct Profile {
     name: Name,
     key: Keys,
-    known_users: Vec<UserProfile>,
-    known_networks: Vec<String>,
+    known_users: HashSet<UserProfile>,
+    known_networks: HashSet<Network>,
 }
 
 impl Profile {
     /// Creates a new profile from provided name and generates new keypair
     fn new_from_key(name: String, key: Keys) -> Self {
+        let mut nets = HashSet::new();
+        let net1 = Network::new(MAIN_NET.to_string(), NetworkType::Public).unwrap();
+        let net2 = Network::new("t2".to_string(), NetworkType::Private(PeerId::random())).unwrap();
+        let net3 = Network::new(
+            "t3".to_string(),
+            NetworkType::Protected("secret".to_string()),
+        )
+        .unwrap();
+        nets.insert(net1);
+        nets.insert(net2);
+        nets.insert(net3);
         Profile {
             name,
             key,
-            known_users: vec![],
-            known_networks: vec![],
+            known_users: HashSet::new(),
+            known_networks: nets,
         }
     }
 
@@ -78,13 +92,12 @@ impl Profile {
     }
 
     #[allow(unused)]
-    pub fn known_users(&self) -> &[UserProfile] {
-        &self.known_users
+    pub fn known_users(&self) -> HashSet<UserProfile> {
+        self.known_users.to_owned()
     }
 
-    #[allow(unused)]
-    pub fn known_networks(&self) -> &[String] {
-        &self.known_networks
+    pub fn known_networks(&self) -> HashSet<Network> {
+        self.known_networks.to_owned()
     }
 
     pub fn keypair(&self) -> Result<Keypair, RetoroError> {

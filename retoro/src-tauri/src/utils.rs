@@ -1,5 +1,7 @@
 use libp2p::PeerId;
 
+pub const MAIN_NET: &str = "main";
+
 pub fn serialize_peer_id<S>(peer_id: &PeerId, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
