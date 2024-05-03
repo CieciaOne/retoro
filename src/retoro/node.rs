@@ -1,33 +1,67 @@
-use crate::config;
-use crate::error;
-use crate::message::Message;
-use crate::profile::Profile;
+// pub mod retoro;
 
+use super::config::Config;
+use super::error::Error;
+use super::message::Message;
+use super::profile::Profile;
 use chrono::Utc;
-use config::Config;
-use error::RetoroError;
 use futures::stream::StreamExt;
 use libp2p::dcutr;
+use libp2p::PeerId;
 use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
 use libp2p::{identify, ping, Swarm};
 use log::debug;
-use log::error;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
-use tokio::{io, io::AsyncBufReadExt, select};
+use tokio::select;
 
-pub struct Retoro {
+pub const MAIN_NET: &str = "main";
+pub enum Event {
+    ReceivedMessage(String),
+    JoinedChannel(String), // should return propper channel and the node leaving
+    LeftChannel(String),   //should return something like who and which channel
+    AddedAsFriend,
+}
+
+struct NodeRepr {
+    name: String,
+    peer_id: PeerId,
+}
+
+struct Channel {
+    name: String,
+    password: Option<String>,
+    nodes: Vec<NodeRepr>,
+    messages: Vec<Message>,
+}
+
+// pub trait Node{
+//     fn new(name: String) -> Result<impl Sized, Error>;
+//     fn with_config(config:Config) -> Self;
+//     fn run(&mut self) -> Result<(), Error>;
+//     fn event_stream(&self) ->impl Stream<Item = Event> + Unpin;
+//     fn name(&self) -> String;
+//     fn keypair(&self) -> Keypair;
+//     fn channels(&self) -> Vec<Channel>;
+//     fn join(&mut self, channel: String) -> Result<(),Error>;
+//     fn remember(&mut self, node: NodeRepr) -> Result<(),Error>;
+//     fn send_message(&mut self, message: Message, target: Target) -> Result<(), Error>;
+// }
+
+pub struct Node {
     swarm: Swarm<RetoroBehaviour>,
     config: Config,
     profile: Profile,
 }
 
-impl Retoro {
-    pub async fn new(config: Config, profile: Profile) -> Result<Self, RetoroError> {
-        let swarm = Retoro::swarm(&profile).await?;
+impl Node {
+    pub fn new(name: String) -> Result<Self, Error> {
+        let config = Config::default();
+        let profile = Profile::new(name)?;
+        let swarm = Node::swarm(&profile)?;
         Ok(Self {
             swarm,
             config,
@@ -35,7 +69,7 @@ impl Retoro {
         })
     }
 
-    async fn swarm(profile: &Profile) -> Result<Swarm<RetoroBehaviour>, RetoroError> {
+    fn swarm(profile: &Profile) -> Result<Swarm<RetoroBehaviour>, Error> {
         let swarm = libp2p::SwarmBuilder::with_existing_identity(profile.keypair()?)
             .with_tokio()
             .with_tcp(
@@ -43,48 +77,38 @@ impl Retoro {
                 noise::Config::new,
                 yamux::Config::default,
             )
-            .map_err(|e| RetoroError::Swarm(format!("Failed building swarm: {e}")))?
+            .map_err(|e| Error::Swarm(format!("Failed building swarm: {e}")))?
             .with_quic()
             .with_behaviour(|key| {
-                // To content-address message, we can take the hash of message and use it as an ID.
                 let message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
                     let timestamp = Utc::now().timestamp_micros();
                     timestamp.hash(&mut s);
                     message.data.hash(&mut s);
                     message.topic.hash(&mut s);
-                    message.source.hash(&mut s);
                     gossipsub::MessageId::from(s.finish().to_string())
                 };
-
-                // Set a custom gossipsub configuration
                 let gossipsub_config = gossipsub::ConfigBuilder::default()
                     .heartbeat_interval(Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
                     .validation_mode(gossipsub::ValidationMode::Strict)
                     .message_id_fn(message_id_fn)
                     .build()?;
-
-                // build a gossipsub network behaviour
                 let gossipsub = gossipsub::Behaviour::new(
                     gossipsub::MessageAuthenticity::Signed(key.clone()),
                     gossipsub_config,
                 )?;
-
                 let relay = relay::Behaviour::new(key.public().to_peer_id(), Default::default());
-
                 let dcutr = dcutr::Behaviour::new(key.public().to_peer_id());
-
                 let ping = ping::Behaviour::new(ping::Config::new());
-
                 let identify = identify::Behaviour::new(identify::Config::new(
-                    "/TODO/0.0.1".to_string(),
+                    "/retoro/0.0.1".to_string(),
                     key.public(),
                 ));
-
                 let mdns = mdns::tokio::Behaviour::new(
                     mdns::Config::default(),
                     key.public().to_peer_id(),
                 )?;
+
                 Ok(RetoroBehaviour {
                     gossipsub,
                     mdns,
@@ -101,47 +125,69 @@ impl Retoro {
         Ok(swarm)
     }
 
-    pub async fn dial_known_nodes(&mut self) -> Result<(), RetoroError> {
+    pub fn dial_known_nodes(&mut self) -> Result<(), Error> {
         self.config
-            .get_bootnodes()
+            .bootnodes()
             .iter()
             .try_for_each(|node| self.swarm.dial(node.clone()))
-            .map_err(|e| RetoroError::Swarm(format!("Failed dialing known nodes: {e}")))
+            .map_err(|e| Error::Swarm(format!("Failed dialing known nodes: {e}")))
     }
 
-    pub async fn run(&mut self) -> Result<(), RetoroError> {
-        self.dial_known_nodes().await?;
-        // Read full lines from stdin as temporary measure for testing
-        let mut stdin = io::BufReader::new(io::stdin()).lines();
+    pub fn send_message(&mut self, content: String, target: String) -> Result<(), Error> {
+        let name = self.profile.name();
+        let pk = self.profile.keypair()?.public();
+        let topic = gossipsub::IdentTopic::new(target);
+        let message = Message::new(name, pk.to_peer_id(), content);
+        let bytes = bincode::serialize(&message).unwrap();
 
-        let addrs = self.config.get_addrs();
+        self.swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(topic, bytes)
+            .map_err(|e| Error::Swarm(format!("Failed to send message: {e}")))?;
+        Ok(())
+    }
+
+    fn start_listening(&mut self) -> Result<(), Error> {
+        let addrs = self.config.interfaces();
         addrs.into_iter().try_for_each(|addr| {
             self.swarm
                 .listen_on(addr)
                 .map(|_| ())
-                .map_err(|e| RetoroError::Swarm(format!("Failed running the swarm: {e}")))
+                .map_err(|e| Error::Swarm(format!("Failed running the swarm: {e}")))
         })?;
+        Ok(())
+    }
 
-        let topic = gossipsub::IdentTopic::new("test-net");
+    fn connect(&mut self, topic: String) -> Result<(), Error> {
+        let t = gossipsub::IdentTopic::new(topic.clone());
         self.swarm
             .behaviour_mut()
             .gossipsub
-            .subscribe(&topic)
-            .map_err(|e| RetoroError::Swarm(format!("Failed subscribing to topic: {e}")))?;
+            .subscribe(&t)
+            .map_err(|e| Error::Swarm(format!("Failed subscribing to topic: {e}")))?;
+        debug!("Connected to: {topic}");
+        Ok(())
+    }
+
+    pub async fn run(&mut self) -> Result<(), Error> {
+        self.dial_known_nodes()?;
+        self.start_listening()?;
+        self.connect(MAIN_NET.to_string())?;
 
         loop {
             select! {
-                Ok(Some(line)) = stdin.next_line() => {
-                    let name = self.profile.name();
-                    let pk = self.profile.keypair()?.public();
-                    let message = Message::new(name,pk.to_peer_id(),line);
-                    let bytes = bincode::serialize(&message).unwrap();
-                    if let Err(e) = self.swarm
-                        .behaviour_mut().gossipsub
-                        .publish(topic.clone(), bytes) {
-                        error!("Publish error: {e:?}");
-                    }
-                }
+                // Ok(Some(line)) = stdin.next_line() => {
+                //     let name = self.profile.name();
+                //     let pk = self.profile.keypair()?.public();
+                //     let message = Message::new(name,pk.to_peer_id(),line);
+                //     let bytes = bincode::serialize(&message).unwrap();
+                //     if let Err(e) = self.swarm
+                //         .behaviour_mut().gossipsub
+                //         .publish(topic.clone(), bytes) {
+                //         error!("Publish error: {e:?}");
+                //     }
+                // }
                 event = self.swarm.select_next_some() => match event {
                     SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
                         for (peer_id, _multiaddr) in list {

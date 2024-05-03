@@ -3,11 +3,12 @@ use libp2p::PeerId;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::{deserialize_peer_id, serialize_peer_id};
+
+use super::utils::{deserialize_peer_id, serialize_peer_id};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
-    id: Uuid,
+    pub id: Uuid,
     author_name: String,
     #[serde(
         serialize_with = "serialize_peer_id",
@@ -28,7 +29,7 @@ impl Message {
             timestamp: Utc::now().timestamp_millis(),
         }
     }
-    // pub fn content_as_utf8(&self) -> Result<&str, RetoroError> {
+    // pub fn content_as_utf8(&self) -> Result<&str, Error> {
     //     Ok(std::str::from_utf8(self.content.as_slice())?)
     // }
 }

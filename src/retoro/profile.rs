@@ -1,6 +1,5 @@
-use crate::config::Config;
-use crate::error::RetoroError;
-use crate::utils::{deserialize_peer_id, serialize_peer_id};
+use super::error::Error;
+use super::utils::{deserialize_peer_id, serialize_peer_id};
 use ed25519_dalek::{pkcs8::DecodePrivateKey, pkcs8::EncodePrivateKey, SigningKey};
 use libp2p::{identity::Keypair, Multiaddr, PeerId};
 use rand::rngs::OsRng;
@@ -29,45 +28,45 @@ impl Profile {
 
     /// Creates a new profile from provided name while generating key
     #[allow(unused)]
-    pub fn new(name: String) -> Result<Self, RetoroError> {
+    pub fn new(name: String) -> Result<Self, Error> {
         let mut rng = OsRng;
         let key = Keys::generate(&mut rng);
         Ok(Profile::new_from_key(name, key))
     }
 
-    fn read_key_from_file(path: &str) -> Result<Keys, RetoroError> {
+    fn read_key_from_file(path: &str) -> Result<Keys, Error> {
         match Keys::read_pkcs8_pem_file(path) {
             Ok(key) => Ok(key),
-            Err(e) => Err(RetoroError::Keypair(format!(
+            Err(e) => Err(Error::Keypair(format!(
                 "Error occured when loading keypair {path}: {e}"
             ))),
         }
     }
 
-    /// load profile specified in config
-    pub fn load_from_config(config: &Config) -> Result<Profile, RetoroError> {
-        let name = config.get_name();
-        let path = config.get_pem_file_path();
+    // /// load profile specified in config
+    // pub fn load_from_config(config: &Config) -> Result<Profile, Error> {
+    //     let name = config.name();
+    //     let path = config.keypair();
 
-        if name.is_empty() {
-            return Err(RetoroError::Profile("Missing name in config".to_string()));
-        }
-        if path.is_empty() {
-            return Err(RetoroError::Profile(
-                "Missing pem file path in config".to_string(),
-            ));
-        }
+    //     if name.is_empty() {
+    //         return Err(Error::Profile("Missing name in config".to_string()));
+    //     }
+    //     if path.is_empty() {
+    //         return Err(Error::Profile(
+    //             "Missing pem file path in config".to_string(),
+    //         ));
+    //     }
 
-        let key = Profile::read_key_from_file(&path)?;
-        Ok(Profile::new_from_key(name, key))
-    }
+    //     let key = Profile::read_key_from_file(&path)?;
+    //     Ok(Profile::new_from_key(name, key))
+    // }
 
     #[allow(unused)]
-    pub fn write_key_to_file(&self, path: &str) -> Result<(), RetoroError> {
+    pub fn write_key_to_file(&self, path: &str) -> Result<(), Error> {
         use ed25519_dalek::pkcs8::spki::der::pem::LineEnding;
         match self.key.write_pkcs8_pem_file(path, LineEnding::CR) {
             Ok(_) => Ok(()),
-            Err(e) => Err(RetoroError::Keypair(format!(
+            Err(e) => Err(Error::Keypair(format!(
                 "Error occured when writing keypair {path}: {e}"
             ))),
         }
@@ -87,10 +86,10 @@ impl Profile {
         &self.known_networks
     }
 
-    pub fn keypair(&self) -> Result<Keypair, RetoroError> {
+    pub fn keypair(&self) -> Result<Keypair, Error> {
         let mut key_bytes = self.key.to_bytes();
         let keypair = Keypair::ed25519_from_bytes(&mut key_bytes)
-            .map_err(|e| RetoroError::Keypair(format!("Failed decoding keypair: {e}")))?;
+            .map_err(|e| Error::Keypair(format!("Failed decoding keypair: {e}")))?;
         Ok(keypair)
     }
 }
@@ -112,17 +111,17 @@ mod test {
     use libp2p::identity::Keypair;
     use rand::rngs::OsRng;
 
-    use crate::error::RetoroError;
+    use crate::retoro::error::Error;
 
     use super::Profile;
 
     #[test]
-    fn new_profile_from_keypair() -> Result<(), RetoroError> {
+    fn new_profile_from_keypair() -> Result<(), Error> {
         let mut rng = OsRng;
         let key = Keys::generate(&mut rng);
         let mut key_bytes = key.to_bytes();
         let keypair = Keypair::ed25519_from_bytes(&mut key_bytes)
-            .map_err(|e| RetoroError::Keypair(format!("Failed generating the keypair {e}")))?;
+            .map_err(|e| Error::Keypair(format!("Failed generating the keypair {e}")))?;
         let name = "Somename".to_string();
         let user = Profile::new_from_key(name, key.clone());
 

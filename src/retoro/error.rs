@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum RetoroError {
+pub enum Error {
     #[error("Swarm error: {0}")]
     Swarm(String),
     #[error("Config error: {0}")]
