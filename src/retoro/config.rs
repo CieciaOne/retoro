@@ -1,17 +1,20 @@
+use libp2p::{
+    identity::Keypair,
+    multiaddr::Protocol,
+    Multiaddr,
+};
 use std::net::Ipv4Addr;
 
-use ed25519_dalek::SigningKey;
-use libp2p::{multiaddr::Protocol, Multiaddr};
-use rand::rngs::OsRng;
+use super::error::Error;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct Config {
     /// Name of user
     name: String,
     /// Keypair
-    keypair: [u8; 64],
+    keypair: Keypair,
     /// Determine wehter to listen on ipv6 or ipv4 loopback address, the default is ipv4
-    interfaces: Vec<Multiaddr>,
+    addresses: Vec<Multiaddr>,
     /// Bootnode list
     bootnodes: Vec<Multiaddr>,
 }
@@ -19,15 +22,30 @@ pub struct Config {
 impl Config {
     pub fn new(
         name: String,
-        keypair: [u8; 64],
+        keypair: Keypair,
         interfaces: Vec<Multiaddr>,
         bootnodes: Vec<Multiaddr>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Error> {
+        if interfaces.is_empty() {
+            return Err(Error::Config(format!(
+                "At least one interface is required."
+            )));
+        }
+        Ok(Self {
             name,
             keypair,
-            interfaces,
+            addresses: interfaces,
             bootnodes,
+        })
+    }
+
+    #[allow(unused)]
+    fn new_from_key(name: String, keypair: Keypair) -> Self {
+        Config {
+            name,
+            keypair,
+            addresses: vec![],
+            bootnodes: vec![],
         }
     }
 
@@ -39,21 +57,23 @@ impl Config {
         self.name.clone()
     }
 
-    pub fn keypair(&self) -> [u8; 64] {
-        self.keypair
+    pub fn keypair(&self) -> Keypair {
+        self.keypair.clone()
     }
+
+    // pub fn ed25519_keypair(&self) -> Result<Ed25519Keypair, Error>{
+    // Ed25519Keypair::from(self.keypair.)?
+    // }
 
     pub fn interfaces(&self) -> Vec<Multiaddr> {
-        self.interfaces.clone()
+        self.addresses.clone()
     }
-
-    pub fn default() -> Self {
-        let mut csprng = OsRng;
-        let signing_key: SigningKey = SigningKey::generate(&mut csprng);
-        let keypair = signing_key.to_keypair_bytes();
-        let public = signing_key.verifying_key().to_bytes();
-        let public_string = String::from_utf8(public.to_vec()).unwrap();
-        let profile_name = format!("Node-{public_string}");
+}
+impl Default for Config{
+    fn default() -> Self {
+        let id = uuid::Uuid::new_v4().to_string();
+        let profile_name = format!("Node-{id}");
+        let keypair = Keypair::generate_ed25519();
         let interfaces = vec![
             Multiaddr::empty()
                 .with(Protocol::from(Ipv4Addr::UNSPECIFIED))
@@ -67,7 +87,7 @@ impl Config {
         Config {
             name: profile_name,
             keypair,
-            interfaces,
+            addresses: interfaces,
             bootnodes: vec![],
         }
     }

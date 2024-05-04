@@ -1,42 +1,23 @@
-// pub mod retoro;
-
 use super::config::Config;
 use super::error::Error;
 use super::message::Message;
-use super::profile::Profile;
+use super::utils::{deserialize_peer_id, serialize_peer_id};
 use chrono::Utc;
 use futures::stream::StreamExt;
-use libp2p::dcutr;
-use libp2p::PeerId;
+use libp2p::identity::Keypair;
+use libp2p::{dcutr, PeerId};
 use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
 use libp2p::{identify, ping, Swarm};
 use log::debug;
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::select;
 
 pub const MAIN_NET: &str = "main";
-pub enum Event {
-    ReceivedMessage(String),
-    JoinedChannel(String), // should return propper channel and the node leaving
-    LeftChannel(String),   //should return something like who and which channel
-    AddedAsFriend,
-}
-
-struct NodeRepr {
-    name: String,
-    peer_id: PeerId,
-}
-
-struct Channel {
-    name: String,
-    password: Option<String>,
-    nodes: Vec<NodeRepr>,
-    messages: Vec<Message>,
-}
 
 // pub trait Node{
 //     fn new(name: String) -> Result<impl Sized, Error>;
@@ -51,26 +32,40 @@ struct Channel {
 //     fn send_message(&mut self, message: Message, target: Target) -> Result<(), Error>;
 // }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeRepr {
+    name: String,
+    #[serde(
+        serialize_with = "serialize_peer_id",
+        deserialize_with = "deserialize_peer_id"
+    )]
+    peer_id: PeerId,
+}
+
 pub struct Node {
     swarm: Swarm<RetoroBehaviour>,
     config: Config,
-    profile: Profile,
+    // profile: Data,
 }
 
 impl Node {
-    pub fn new(name: String) -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let config = Config::default();
-        let profile = Profile::new(name)?;
-        let swarm = Node::swarm(&profile)?;
-        Ok(Self {
-            swarm,
-            config,
-            profile,
-        })
+        let swarm = Node::swarm(&config)?;
+        Ok(Self { swarm, config })
     }
 
-    fn swarm(profile: &Profile) -> Result<Swarm<RetoroBehaviour>, Error> {
-        let swarm = libp2p::SwarmBuilder::with_existing_identity(profile.keypair()?)
+    pub fn with_config(config: Config) -> Result<Self, Error> {
+        let swarm = Node::swarm(&config)?;
+        Ok(Self { swarm, config })
+    }
+
+    pub fn keypair(&self) -> Keypair {
+        self.config.keypair()
+    }
+
+    fn swarm(config: &Config) -> Result<Swarm<RetoroBehaviour>, Error> {
+        let swarm = libp2p::SwarmBuilder::with_existing_identity(config.keypair())
             .with_tokio()
             .with_tcp(
                 tcp::Config::default(),
@@ -134,8 +129,8 @@ impl Node {
     }
 
     pub fn send_message(&mut self, content: String, target: String) -> Result<(), Error> {
-        let name = self.profile.name();
-        let pk = self.profile.keypair()?.public();
+        let name = self.config.name();
+        let pk = self.config.keypair().public();
         let topic = gossipsub::IdentTopic::new(target);
         let message = Message::new(name, pk.to_peer_id(), content);
         let bytes = bincode::serialize(&message).unwrap();

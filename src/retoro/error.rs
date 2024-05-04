@@ -7,7 +7,7 @@ pub enum Error {
     #[error("Config error: {0}")]
     Config(String),
     #[error("Invalid profile: {0}")]
-    Profile(String),
+    Data(String),
     #[error("Keypair error: {0}")]
     Keypair(String),
 }
