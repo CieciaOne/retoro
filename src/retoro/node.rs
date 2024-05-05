@@ -13,7 +13,7 @@ use libp2p::{
     gossipsub, mdns, noise, relay, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux,
 };
 use libp2p::{identify, ping, Swarm};
-use log::debug;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -66,7 +66,6 @@ impl Node {
     pub fn with_config(config: Config) -> Result<Self, Error> {
         let swarm = Node::swarm(&config)?;
         let data = Data::new(swarm.local_peer_id().to_owned());
-        // let swarm = Arc::new(Mutex::new(s));
         let (command_sender, command_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (event_sender, _) = tokio::sync::broadcast::channel(CHANNEL_SIZE);
         Ok(Self {
@@ -207,6 +206,7 @@ impl Node {
         debug!("Connected to: {topic}");
         Ok(())
     }
+
     fn process_command(&mut self, command: Command) -> Result<(), Error> {
         match command {
             Command::SendMessage(command) => self.send_message(command)?,
@@ -215,7 +215,7 @@ impl Node {
             Command::LeaveChannel(_) => todo!(),
             Command::AddFriend(_) => todo!(),
             Command::RemoveFriend(_) => todo!(),
-            Command::Shutdown => {}
+            _ => {}
         }
         Ok(())
     }
@@ -266,15 +266,23 @@ impl Node {
     }
 
     pub async fn run(&mut self) -> Result<(), Error> {
+        info!("Instance started");
         self.dial_known_nodes()?;
         self.start_listening()?;
         self.connect(MAIN_NET.to_string())?;
         loop {
             select! {
                 command = self.command_receiver.recv() => {
-                    if let Some(cmd) = command{
-                        if let Err(e) = self.process_command(cmd) {
-                            self.send_event(Event::Error(e))?;
+                    debug!("Command issued: {command:?}");
+                    match command{
+                        Some(Command::Shutdown) | None => {
+                            info!("Instance shutdown");
+                            return Ok(());
+                        }
+                        Some(command) => {
+                            if let Err(e) = self.process_command(command) {
+                                self.send_event(Event::Error(e))?;
+                            }
                         }
                     }
                 },

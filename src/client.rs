@@ -1,24 +1,23 @@
-use log::{debug, error};
+use log::error;
 use retoro::{self, Channel, Command, Event, MessageCommand, Target};
 
 pub async fn start() -> anyhow::Result<()> {
     let mut retoro = retoro::Node::new()?;
-    let commands = retoro.commands();
     let mut events = retoro.events();
+    let commands = retoro.commands();
     // let keypair = Keypair::generate_ed25519();
     // let addr = retoro::Multiaddr::from_str("/ip4/127.0.0.1/tcp/5511")?;
     // let interfaces = vec![addr];
     // let bootnodes = vec![];
     // let config = retoro::Config::new("N".to_string(), keypair, interfaces, bootnodes)?;
     // let mut retoro = retoro::Node::with_config(config)?;
+
     tokio::spawn(async move {
-        match retoro.run().await {
-            Ok(()) => {}
-            Err(e) => {
-                debug!("Implement error handling dumbass {e}");
-            }
+        if let Err(e) = retoro.run().await {
+            error!("Implement error handling dumbass {e}");
         };
     });
+
     tokio::spawn(async move {
         while let Ok(event) = events.recv().await {
             match event {
@@ -44,12 +43,12 @@ pub async fn start() -> anyhow::Result<()> {
     });
 
     commands.send(msg_cmd.clone()).await?;
-    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    commands.send(msg_cmd.clone()).await?;
-    // tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-    // commands.send(Command::Shutdown).await?;
-
+    // loop {
+    //     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    // }
+    commands.send(Command::Shutdown).await?;
     Ok(())
 }
 
