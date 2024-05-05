@@ -1,15 +1,22 @@
+use super::channel::Channel;
+use super::common::Source;
+use super::error::Error;
+
 use libp2p::PeerId;
 
-use super::{channel::Channel, message::Message};
-
+#[derive(Clone)]
 pub enum Event {
-    ReceivedMessage(Message, Source),
-    JoinedChannel(Channel, PeerId), // should return propper channel and the node leaving
-    LeftChannel(Channel, PeerId),   //should return something like who and which channel
-    AddedAsFriend(PeerId),
+    DiscoveredNode(PeerId),
+    ReceivedMessage(MessageEvent),
+    JoinedChannel(Channel),
+    LeftChannel(Channel),
+    AddedFriend(PeerId),
+    RemoveedFriend(PeerId),
+    Error(Error),
 }
 
-enum Source {
-    Direct(PeerId),
-    Channel(Channel),
+#[derive(Clone)]
+pub struct MessageEvent {
+    pub message: String,
+    pub source: Source,
 }

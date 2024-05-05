@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Clone, Error, Debug)]
 pub enum Error {
     #[error("Swarm error: {0}")]
     Swarm(String),
@@ -10,4 +10,6 @@ pub enum Error {
     Data(String),
     #[error("Keypair error: {0}")]
     Keypair(String),
+    #[error("Transmission error: {0}")]
+    Transmission(String),
 }

@@ -1,8 +1,4 @@
-use libp2p::{
-    identity::Keypair,
-    multiaddr::Protocol,
-    Multiaddr,
-};
+use libp2p::{identity::Keypair, multiaddr::Protocol, Multiaddr};
 use std::net::Ipv4Addr;
 
 use super::error::Error;
@@ -27,9 +23,9 @@ impl Config {
         bootnodes: Vec<Multiaddr>,
     ) -> Result<Self, Error> {
         if interfaces.is_empty() {
-            return Err(Error::Config(format!(
-                "At least one interface is required."
-            )));
+            return Err(Error::Config(
+                "At least one interface is required.".to_string(),
+            ));
         }
         Ok(Self {
             name,
@@ -69,7 +65,7 @@ impl Config {
         self.addresses.clone()
     }
 }
-impl Default for Config{
+impl Default for Config {
     fn default() -> Self {
         let id = uuid::Uuid::new_v4().to_string();
         let profile_name = format!("Node-{id}");

@@ -1,3 +1,4 @@
+use super::channel::Channel;
 use libp2p::PeerId;
 
 pub fn serialize_peer_id<S>(peer_id: &PeerId, serializer: S) -> Result<S::Ok, S::Error>
@@ -16,4 +17,16 @@ where
 
     let bytes = serde::Deserialize::deserialize(deserializer)?;
     PeerId::from_bytes(bytes).map_err(D::Error::custom)
+}
+
+#[derive(Debug, Clone)]
+pub enum Source {
+    Direct(PeerId),
+    Channel(Channel),
+}
+
+#[derive(Debug, Clone)]
+pub enum Target {
+    Direct(PeerId),
+    Channel(Channel),
 }

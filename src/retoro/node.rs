@@ -1,7 +1,10 @@
+use super::command::{Command, MessageCommand};
+use super::common::{deserialize_peer_id, serialize_peer_id, Target};
 use super::config::Config;
+use super::data::Data;
 use super::error::Error;
+use super::event::Event;
 use super::message::Message;
-use super::utils::{deserialize_peer_id, serialize_peer_id};
 use chrono::Utc;
 use futures::stream::StreamExt;
 use libp2p::identity::Keypair;
@@ -16,8 +19,11 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 use tokio::select;
+use tokio::sync::broadcast::{Receiver as EventReceiver, Sender as EventSender};
+use tokio::sync::mpsc::{Receiver as CommandReceiver, Sender as CommandSender};
 
 pub const MAIN_NET: &str = "main";
+pub const CHANNEL_SIZE: usize = 1024;
 
 // pub trait Node{
 //     fn new(name: String) -> Result<impl Sized, Error>;
@@ -45,23 +51,58 @@ pub struct NodeRepr {
 pub struct Node {
     swarm: Swarm<RetoroBehaviour>,
     config: Config,
-    // profile: Data,
+    data: Data,
+    command_sender: CommandSender<Command>,
+    command_receiver: CommandReceiver<Command>,
+    event_sender: EventSender<Event>,
 }
 
 impl Node {
     pub fn new() -> Result<Self, Error> {
         let config = Config::default();
-        let swarm = Node::swarm(&config)?;
-        Ok(Self { swarm, config })
+        Node::with_config(config)
     }
 
     pub fn with_config(config: Config) -> Result<Self, Error> {
         let swarm = Node::swarm(&config)?;
-        Ok(Self { swarm, config })
+        let data = Data::new(swarm.local_peer_id().to_owned());
+        // let swarm = Arc::new(Mutex::new(s));
+        let (command_sender, command_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (event_sender, _) = tokio::sync::broadcast::channel(CHANNEL_SIZE);
+        Ok(Self {
+            swarm,
+            config,
+            data,
+            command_sender,
+            command_receiver,
+            event_sender,
+        })
     }
 
     pub fn keypair(&self) -> Keypair {
         self.config.keypair()
+    }
+
+    fn send_event(&self, event: Event) -> Result<(), Error> {
+        self.event_sender
+            .send(event)
+            .map_err(|e| Error::Transmission(format!("Failed sending event: {e}")))?;
+        Ok(())
+    }
+
+    pub fn commands(&self) -> CommandSender<Command> {
+        self.command_sender.clone()
+    }
+
+    pub fn events(&self) -> EventReceiver<Event> {
+        self.event_sender.subscribe()
+    }
+
+    pub fn id(&self) -> PeerId {
+        self.data.local_peer_id
+    }
+    pub fn name(&self) -> String {
+        self.config.name()
     }
 
     fn swarm(config: &Config) -> Result<Swarm<RetoroBehaviour>, Error> {
@@ -128,18 +169,20 @@ impl Node {
             .map_err(|e| Error::Swarm(format!("Failed dialing known nodes: {e}")))
     }
 
-    pub fn send_message(&mut self, content: String, target: String) -> Result<(), Error> {
-        let name = self.config.name();
-        let pk = self.config.keypair().public();
-        let topic = gossipsub::IdentTopic::new(target);
-        let message = Message::new(name, pk.to_peer_id(), content);
+    fn send_message(&mut self, send_message: MessageCommand) -> Result<(), Error> {
+        let message = Message::new(self.name(), self.id(), send_message.message);
         let bytes = bincode::serialize(&message).unwrap();
-
-        self.swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(topic, bytes)
-            .map_err(|e| Error::Swarm(format!("Failed to send message: {e}")))?;
+        match send_message.target {
+            Target::Direct(_peer) => todo!(),
+            Target::Channel(channel) => {
+                let topic = gossipsub::IdentTopic::new(channel.name);
+                self.swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .publish(topic, bytes)
+                    .map_err(|e| Error::Swarm(format!("Failed to send message: {e}")))?;
+            }
+        }
         Ok(())
     }
 
@@ -164,58 +207,81 @@ impl Node {
         debug!("Connected to: {topic}");
         Ok(())
     }
+    fn process_command(&mut self, command: Command) -> Result<(), Error> {
+        match command {
+            Command::SendMessage(command) => self.send_message(command)?,
+            Command::Ping(_) => todo!(),
+            Command::JoinChannel(_) => todo!(),
+            Command::LeaveChannel(_) => todo!(),
+            Command::AddFriend(_) => todo!(),
+            Command::RemoveFriend(_) => todo!(),
+            Command::Shutdown => {}
+        }
+        Ok(())
+    }
+
+    fn process_event(&mut self, event: SwarmEvent<RetoroBehaviourEvent>) -> Result<(), Error> {
+        match event {
+            SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
+                for (peer_id, _multiaddr) in list {
+                    debug!("mDNS discovered a new peer: {peer_id}");
+                    self.swarm
+                        .behaviour_mut()
+                        .gossipsub
+                        .add_explicit_peer(&peer_id);
+                }
+            }
+            SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
+                for (peer_id, _multiaddr) in list {
+                    debug!("mDNS discover peer has expired: {peer_id}");
+                    self.swarm
+                        .behaviour_mut()
+                        .gossipsub
+                        .remove_explicit_peer(&peer_id);
+                }
+            }
+            SwarmEvent::Behaviour(RetoroBehaviourEvent::Identify(identify::Event::Received {
+                info: identify::Info { observed_addr, .. },
+                ..
+            })) => {
+                debug!("Observed new peer {}", observed_addr.clone());
+                self.swarm.add_external_address(observed_addr.clone());
+            }
+            SwarmEvent::Behaviour(RetoroBehaviourEvent::Gossipsub(gossipsub::Event::Message {
+                propagation_source: peer_id,
+                message_id: _,
+                message,
+            })) => {
+                debug!(
+                    "Message from {peer_id}: {}",
+                    String::from_utf8_lossy(&message.data),
+                )
+            }
+            SwarmEvent::NewListenAddr { address, .. } => {
+                debug!("Local node is listening on {address}");
+            }
+            _ => {}
+        }
+        Ok(())
+    }
 
     pub async fn run(&mut self) -> Result<(), Error> {
         self.dial_known_nodes()?;
         self.start_listening()?;
         self.connect(MAIN_NET.to_string())?;
-
         loop {
             select! {
-                // Ok(Some(line)) = stdin.next_line() => {
-                //     let name = self.profile.name();
-                //     let pk = self.profile.keypair()?.public();
-                //     let message = Message::new(name,pk.to_peer_id(),line);
-                //     let bytes = bincode::serialize(&message).unwrap();
-                //     if let Err(e) = self.swarm
-                //         .behaviour_mut().gossipsub
-                //         .publish(topic.clone(), bytes) {
-                //         error!("Publish error: {e:?}");
-                //     }
-                // }
-                event = self.swarm.select_next_some() => match event {
-                    SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
-                        for (peer_id, _multiaddr) in list {
-                            debug!("mDNS discovered a new peer: {peer_id}");
-                            self.swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                command = self.command_receiver.recv() => {
+                    if let Some(cmd) = command{
+                        if let Err(e) = self.process_command(cmd) {
+                            self.send_event(Event::Error(e))?;
                         }
-                    },
-                    SwarmEvent::Behaviour(RetoroBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
-                        for (peer_id, _multiaddr) in list {
-                            debug!("mDNS discover peer has expired: {peer_id}");
-                            self.swarm.behaviour_mut().gossipsub.remove_explicit_peer(&peer_id);
-                        }
-                    },
-                    SwarmEvent::Behaviour(RetoroBehaviourEvent::Identify(identify::Event::Received{
-                            info: identify::Info { observed_addr, .. },
-                            ..
-                        })) => {
-                            debug!("Observed new peer {}",observed_addr.clone());
-                            self.swarm.add_external_address(observed_addr.clone());
-
-                        },
-                    SwarmEvent::Behaviour(RetoroBehaviourEvent::Gossipsub(gossipsub::Event::Message {
-                        propagation_source: peer_id,
-                        message_id: _,
-                        message,
-                    })) => debug!(
-                            "Message from {peer_id}: {}",
-                            String::from_utf8_lossy(&message.data),
-                        ),
-                    SwarmEvent::NewListenAddr { address, .. } => {
-                        debug!("Local node is listening on {address}");
                     }
-                    _ => {}
+                },
+                event = self.swarm.select_next_some() => {
+                    if let Err(e) = self.process_event(event){
+                        self.send_event(Event::Error(e))?;
+                    }
                 }
             }
         }

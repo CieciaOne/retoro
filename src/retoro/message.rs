@@ -3,9 +3,9 @@ use libp2p::PeerId;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::utils::{deserialize_peer_id, serialize_peer_id};
+use super::common::{deserialize_peer_id, serialize_peer_id};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
     pub id: Uuid,
     author_name: String,
