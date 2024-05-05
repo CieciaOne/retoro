@@ -1,22 +1,13 @@
-mod config;
-mod error;
-mod retoro;
+use std::env;
 
-use config::Config;
-use retoro::Retoro;
-use tracing_subscriber::EnvFilter;
+mod client;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info")
+    }
     pretty_env_logger::init();
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .try_init();
-
-    let config = Config::new_from_file("./config.json").await?;
-
-    let mut retoro = Retoro::new(config).await?;
-    retoro.run().await?;
-
+    client::start().await?;
     Ok(())
 }
