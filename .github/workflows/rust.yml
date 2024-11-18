@@ -13,8 +13,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Change to backend directory
+        run: cd backend || exit 0
+      - name: Remove .env for tests
+        run: rm .env || exit 0
       - name: Run tests
-        run: cd backend && cargo test
+        run: cargo test
 
   fmt:
     name: Rustfmt
@@ -24,8 +28,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+      - name: Change to backend directory
+        run: cd backend || exit 0
+      - name: Remove .env for tests
+        run: rm .env || exit 0
       - name: Enforce formatting
-        run: cd backend && cargo fmt --check
+        run: cargo fmt --check
 
   clippy:
     name: Clippy
@@ -36,8 +44,12 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Change to backend directory
+        run: cd backend || exit 0
+      - name: Remove .env for tests
+        run: rm .env || exit 0
       - name: Linting
-        run: cd backend && cargo clippy -- -D warnings
+        run: cargo clippy -- -D warnings
 
   coverage:
     name: Code coverage
@@ -46,8 +58,12 @@ jobs:
       image: xd009642/tarpaulin
       options: --security-opt seccomp=unconfined
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Change to backend directory
+        run: cd backend || exit 0
+      - name: Remove .env for tests
+        run: rm .env || exit 0
       - name: Generate code coverage
         run: |
-          cd backend && cargo tarpaulin --verbose --workspace
+          cargo tarpaulin --verbose --workspace
+
