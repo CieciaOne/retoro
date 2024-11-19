@@ -5,20 +5,14 @@ use log::{error, info};
 use uuid::Uuid;
 
 use crate::post::model::Post;
-use crate::post::schema::{AddPostSchema, GetNPostsSchema};
-// use crate::user::model::User;
+use crate::post::schema::{AddThreadRequest, GetNPostsRequest};
 use crate::SharedState;
 
-#[post("register")]
+#[post("")]
 async fn add_post(
-    body: web::Json<AddPostSchema>,
+    body: web::Json<AddThreadRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
-    // pub id: Uuid,
-    // pub thread_id: Uuid,
-    // pub author_id: Uuid,
-    // pub content: String,
-    // pub created_at: DateTime<Utc>,
     match sqlx::query_as!(
         Post,
         "INSERT INTO posts VALUES($1,$2,$3,$4,$5);",
@@ -45,7 +39,7 @@ async fn add_post(
 #[get("")]
 async fn get_last_n_posts(
     data: web::Data<SharedState>,
-    body: web::Json<GetNPostsSchema>,
+    body: web::Json<GetNPostsRequest>,
 ) -> Result<impl Responder> {
     let query_result = match sqlx::query_as!(
         Post,
@@ -65,17 +59,17 @@ async fn get_last_n_posts(
 }
 
 #[delete("/{id}")]
-async fn delete_user(id: web::Path<Uuid>, data: web::Data<SharedState>) -> Result<impl Responder> {
-    match sqlx::query_as!(User, "DELETE FROM users WHERE id=$1;", id.clone())
+async fn delete_post(id: web::Path<Uuid>, data: web::Data<SharedState>) -> Result<impl Responder> {
+    match sqlx::query_as!(Post, "DELETE FROM posts WHERE id=$1;", id.clone())
         .execute(&data.db)
         .await
     {
         Ok(_) => {
-            info!("User {id} deleted successfully");
+            info!("Post {id} deleted successfully");
             Ok(HttpResponse::Ok())
         }
         Err(err) => {
-            error!("Deleting user {id} failed: {err} ");
+            error!("Deleting Post {id} failed: {err} ");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }

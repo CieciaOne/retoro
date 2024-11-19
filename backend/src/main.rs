@@ -1,5 +1,6 @@
-use std::env;
+use std::{collections::HashMap, env};
 mod post;
+mod thread;
 mod user;
 
 use actix_cors::Cors;
@@ -7,11 +8,17 @@ use actix_web::{http::header, middleware::Logger, web::Data, App, HttpServer};
 use log::{error, info};
 use post::service::post_service;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use thread::service::thread_service;
 use user::service::user_service;
+use uuid::Uuid;
+
+type UserId = Uuid;
+type SessionId = Uuid;
 
 #[derive(Clone)]
 pub struct SharedState {
     db: Pool<Postgres>,
+    user_sessions: HashMap<UserId, SessionId>,
 }
 
 #[tokio::main]
@@ -53,9 +60,13 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .wrap(Logger::default())
             .wrap(cors)
-            .app_data(Data::new(SharedState { db: pool.clone() }))
+            .app_data(Data::new(SharedState {
+                db: pool.clone(),
+                user_sessions: HashMap::new(),
+            }))
             .configure(user_service)
             .configure(post_service)
+            .configure(thread_service)
     })
     .bind(("0.0.0.0", 8080))?
     .run()

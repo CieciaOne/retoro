@@ -23,3 +23,4 @@ actix-cors = "0.7.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 argon2 = "0.5.3"
 password-hash = "0.5.0"
+thiserror = "2.0.3"

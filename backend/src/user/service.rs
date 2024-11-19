@@ -1,18 +1,21 @@
-use actix_web::{delete, get, post, web, HttpResponse, Responder, Result};
+use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder, Result};
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
 use chrono::Utc;
-use log::{error, info};
+use log::{debug, error, info};
+use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::user::schema::AuthneticateUserSchema;
+use crate::user::schema::{DeleteUserRequest, UserAuthRequest};
 use crate::{user::model::User, SharedState};
+
+use super::error::Error;
 
 #[post("register")]
 async fn register_user(
-    body: web::Json<AuthneticateUserSchema>,
+    body: web::Json<UserAuthRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
     let salt = SaltString::generate(&mut OsRng);
@@ -22,7 +25,7 @@ async fn register_user(
         .expect("Failed hashing")
         .to_string();
 
-    let salt_str = salt.as_str();
+    let salt_str = salt.to_string();
 
     match sqlx::query_as!(
         RegisterUserSchema,
@@ -47,32 +50,20 @@ async fn register_user(
     }
 }
 
-#[post("login")]
+#[get("login")]
 async fn login_user(
-    body: web::Json<AuthneticateUserSchema>,
+    body: web::Json<UserAuthRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = argon2
-        .hash_password(body.password.as_bytes(), &salt)
-        .expect("Failed hashing")
-        .to_string();
-
-    let s = salt.as_str();
-
-    match sqlx::query_as!(User, "SELECT * FROM users WHERE(name LIKE $1);", body.name)
-        .fetch_all(&data.db)
-        .await
-    {
-        Ok(_) => {
-            info!("User {} logged in successfully", body.name);
-            Ok(HttpResponse::Ok())
+    match auth_user(body.name.clone(), body.password.clone(), data.db.clone()).await {
+        Ok(user) => {
+            let session_id = uuid::Uuid::new_v4().to_string();
+            let cookie = actix_web::cookie::Cookie::build("session_id", session_id).finish();
+            Ok(HttpResponse::Ok()
+                .cookie(cookie)
+                .json(user.as_auth_reponse()))
         }
-        Err(err) => {
-            error!("{err}");
-            Err(actix_web::error::ErrorInternalServerError(err))
-        }
+        Err(e) => Err(actix_web::error::ErrorUnauthorized(e)),
     }
 }
 
@@ -91,19 +82,65 @@ async fn get_users(data: web::Data<SharedState>) -> Result<impl Responder> {
     Ok(HttpResponse::Ok().json(query_result))
 }
 
-#[delete("/{id}")]
-async fn delete_user(id: web::Path<Uuid>, data: web::Data<SharedState>) -> Result<impl Responder> {
-    match sqlx::query_as!(User, "DELETE FROM users WHERE id=$1;", id.clone())
-        .execute(&data.db)
+// #[delete("/{id}")]
+// async fn delete_user(
+//     id: web::Path<Uuid>,
+//     req: HttpRequest,
+//     body: UserAuthRequest,
+//     data: web::Data<SharedState>,
+// ) -> Result<impl Responder> {
+//     // if let Some(session_id) = req.cookie("session_id") {
+//     if data.user_sessions.get(&id).is_some_and(|session| {
+//         req.cookie("session_id")
+//             .is_some_and(|s| s.to_string() == session.to_string())
+//     }) {
+//         match auth_user(body.name, body.password, data.db.clone()).await {
+//             Ok(user) => {
+//                 match sqlx::query_as!(User, "DELETE FROM users WHERE id=$1;", user.id.clone())
+//                     .execute(&data.db)
+//                     .await
+//                 {
+//                     Ok(_) => {
+//                         info!("User {id} deleted successfully");
+//                         return Ok(HttpResponse::Ok());
+//                     }
+//                     Err(err) => {
+//                         error!("Deleting user {id} failed: {err} ");
+//                         return Err(actix_web::error::ErrorInternalServerError(err));
+//                     }
+//                 }
+//             }
+//             Err(err) => return Err(actix_web::error::ErrorForbidden(err)),
+//         }
+//     } else {
+//         return Err(actix_web::error::ErrorForbidden(
+//             "Missing session cookie, user isn't logged in.",
+//         ));
+//     }
+// }
+
+async fn auth_user(username: String, password: String, db: Pool<Postgres>) -> Result<User, Error> {
+    match sqlx::query_as!(User, "SELECT * FROM users WHERE(name LIKE $1);", username)
+        .fetch_one(&db)
         .await
     {
-        Ok(_) => {
-            info!("User {id} deleted successfully");
-            Ok(HttpResponse::Ok())
+        Ok(user) => {
+            debug!("User {} found.", username);
+            let salt = SaltString::from_b64(&user.salt).expect("Failed decoding salt");
+            let argon2 = Argon2::default();
+            let password_hash = argon2
+                .hash_password(password.as_bytes(), &salt)
+                .expect("Failed hashing")
+                .to_string();
+            if user.password_hash == password_hash {
+                Ok(user)
+            } else {
+                Err(Error::AuthFailed)
+            }
         }
-        Err(err) => {
-            error!("Deleting user {id} failed: {err} ");
-            Err(actix_web::error::ErrorInternalServerError(err))
+        Err(_) => {
+            error!("User {} does not exist", username);
+            Err(Error::UserNotFound)
         }
     }
 }
@@ -111,6 +148,7 @@ async fn delete_user(id: web::Path<Uuid>, data: web::Data<SharedState>) -> Resul
 pub fn user_service(conf: &mut web::ServiceConfig) {
     let scope = web::scope("api/user")
         .service(register_user)
+        .service(login_user)
         .service(get_users);
 
     conf.service(scope);

@@ -4,16 +4,17 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AddThreadRequest {
     pub name: String,
-    pub author_id: Option<Uuid>,
-    pub content: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GetNPostsRequest {
+pub struct GetNThreadsRequest {
     pub n: i64,
 }
+pub struct GetThreadPosts {
+    pub thread: Uuid,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DeletePostRequest {
+pub struct DeletePostSchema {
     pub id: Uuid,
 }

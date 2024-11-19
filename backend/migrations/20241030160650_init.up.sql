@@ -21,7 +21,7 @@ CREATE TABLE threads (
 CREATE TABLE posts (
     id UUID PRIMARY KEY,
     thread_id UUID NOT NULL,
-    author_id UUID NOT NULL,
+    author_id UUID,
     content TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY (thread_id) REFERENCES threads(id),

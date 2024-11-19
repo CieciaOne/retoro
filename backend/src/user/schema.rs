@@ -1,19 +1,22 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AuthneticateUserSchema {
+pub struct UserAuthRequest {
     pub name: String,
     pub password: String,
 }
-pub struct GetUserSchema {
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserAuthResponse {
     pub id: Uuid,
     pub username: String,
-    pub password_hash: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DeleteUserSchema {
+pub struct DeleteUserRequest {
     pub name: String,
     pub password: String,
 }

@@ -4,10 +4,8 @@ use sqlx::{types::chrono::Utc, FromRow};
 use uuid::Uuid;
 
 #[derive(FromRow, Debug, Serialize, Deserialize)]
-pub struct Post {
+pub struct Thread {
     pub id: Uuid,
-    pub thread_id: Uuid,
-    pub author_id: Option<Uuid>,
-    pub content: String,
+    pub name: String,
     pub created_at: DateTime<Utc>,
 }
