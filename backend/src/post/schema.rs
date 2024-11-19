@@ -5,6 +5,7 @@ use uuid::Uuid;
 pub struct AddThreadRequest {
     pub name: String,
     pub author_id: Option<Uuid>,
+    pub thread_id: Uuid,
     pub content: String,
 }
 
