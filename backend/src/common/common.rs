@@ -87,7 +87,7 @@ mod tests {
         assert_eq!(
             filter.prepare_query("posts".to_string()),
             format!(
-                "SELECT * FROM posts WHERE created_at >= {};",
+                "SELECT * FROM posts WHERE created_at >= '{}';",
                 start_timestamp.to_string()
             )
         );
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(
             filter.prepare_query("posts".to_string()),
             format!(
-                "SELECT * FROM posts WHERE created_at <= {};",
+                "SELECT * FROM posts WHERE created_at <= '{}';",
                 end_timestamp.to_string()
             )
         );
@@ -175,7 +175,7 @@ mod tests {
         };
         assert_eq!(
             filter.prepare_query("posts".to_string()),
-            format!("SELECT * FROM posts WHERE created_at >= {start_timestamp} AND created_at <= {end_timestamp} AND thread_id = {thread} AND author_id = {user} LIMIT {limit};")
+            format!("SELECT * FROM posts WHERE created_at >= '{start_timestamp}' AND created_at <= '{end_timestamp}' AND thread_id = {thread} AND author_id = {user} LIMIT {limit};")
         );
     }
 }
