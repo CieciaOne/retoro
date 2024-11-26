@@ -9,10 +9,11 @@ pub struct UserAuthRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct UserAuthResponse {
+pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
     pub created_at: DateTime<Utc>,
+    pub last_active: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

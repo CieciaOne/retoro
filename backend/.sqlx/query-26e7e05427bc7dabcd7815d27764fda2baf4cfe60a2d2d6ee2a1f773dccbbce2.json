@@ -25,6 +25,11 @@
       },
       {
         "ordinal": 4,
+        "name": "last_active",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
         "name": "salt",
         "type_info": "Varchar"
       }
@@ -33,6 +38,7 @@
       "Left": []
     },
     "nullable": [
+      false,
       false,
       false,
       false,

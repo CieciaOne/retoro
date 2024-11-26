@@ -1,4 +1,4 @@
-use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder, Result};
+use actix_web::{get, post, web, HttpResponse, Responder, Result};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
@@ -8,7 +8,7 @@ use log::{debug, error, info};
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::user::schema::{DeleteUserRequest, UserAuthRequest};
+use crate::user::schema::UserAuthRequest;
 use crate::{user::model::User, SharedState};
 
 use super::error::Error;
@@ -28,20 +28,21 @@ async fn register_user(
     let salt_str = salt.to_string();
 
     match sqlx::query_as!(
-        RegisterUserSchema,
-        "INSERT INTO users VALUES($1,$2,$3,$4,$5);",
+        User,
+        "INSERT INTO users VALUES($1,$2,$3,$4,$5,$6) RETURNING *;",
         Uuid::new_v4(),
         body.name,
         password_hash,
         Utc::now(),
+        Utc::now(),
         salt_str
     )
-    .execute(&data.db)
+    .fetch_one(&data.db)
     .await
     {
-        Ok(_) => {
+        Ok(user) => {
             info!("User {} registered successfully", body.name);
-            Ok(HttpResponse::Ok())
+            Ok(HttpResponse::Created().json(user.as_reponse()))
         }
         Err(err) => {
             error!("{err}");
@@ -59,9 +60,7 @@ async fn login_user(
         Ok(user) => {
             let session_id = uuid::Uuid::new_v4().to_string();
             let cookie = actix_web::cookie::Cookie::build("session_id", session_id).finish();
-            Ok(HttpResponse::Ok()
-                .cookie(cookie)
-                .json(user.as_auth_reponse()))
+            Ok(HttpResponse::Ok().cookie(cookie).json(user.as_reponse()))
         }
         Err(e) => Err(actix_web::error::ErrorUnauthorized(e)),
     }

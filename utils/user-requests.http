@@ -2,6 +2,7 @@
 POST http://localhost:8080/api/user/register
 Accept: application/json
 Content-Type: application/json
+
 {
     "name": "krzys",
     "password": "krzysztofpass"

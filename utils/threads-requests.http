@@ -1,47 +1,12 @@
-### Register new user
+### add new thread
 POST http://localhost:8080/api/thread
 Accept: application/json
 Content-Type: application/json
+
 {
-    "name": "test thread",
+    "name": "testior"
 }
 
-### Get users
+### Get threads
 GET http://localhost:8080/api/thread
 Accept: application/json
-Content-Type: application/json
-{
-    "n": 10
-}
-
-### Login as user
-GET http://localhost:8080/api/user/login
-Accept: application/json
-Content-Type: application/json
-
-{
-    "name": "krzys",
-    "password": "krzysztofpass"
-}
-
-### Login as user INVALID
-GET http://localhost:8080/api/user/login
-Accept: application/json
-Content-Type: application/json
-
-{
-    "name": "krzys",
-    "password": "wrongpass"
-}
-
-
-### Login as user INVALID
-GET http://localhost:8080/api/user/login
-Accept: application/json
-Content-Type: application/json
-Cookie: 
-
-{
-    "name": "krzys",
-    "password": "wrongpass"
-}

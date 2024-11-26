@@ -8,4 +8,5 @@ pub struct Thread {
     pub id: Uuid,
     pub name: String,
     pub created_at: DateTime<Utc>,
+    pub last_active: DateTime<Utc>,
 }

@@ -9,7 +9,7 @@
         "Varchar",
         "Varchar",
         "Timestamptz",
-        "Varchar"
+        "Timestamptz"
       ]
     },
     "nullable": []

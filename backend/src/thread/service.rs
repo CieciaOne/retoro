@@ -1,12 +1,13 @@
-use actix_web::{delete, get, post, web, HttpResponse, Responder, Result};
+use actix_web::{get, post, web, HttpResponse, Responder, Result};
 use chrono::Utc;
 use log::{error, info};
 
 use uuid::Uuid;
 
+use crate::common::common::Filter;
 use crate::post::model::Post;
 use crate::thread::model::Thread;
-use crate::thread::schema::{AddThreadRequest, GetNThreadsRequest};
+use crate::thread::schema::AddThreadRequest;
 use crate::SharedState;
 
 #[post("")]
@@ -15,18 +16,18 @@ async fn add_thread(
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
     match sqlx::query_as!(
-        Post,
-        "INSERT INTO threads VALUES($1,$2,$3);",
+        Thread,
+        "INSERT INTO threads VALUES($1,$2,$3) RETURNING *;",
         Uuid::new_v4(),
         body.name,
         Utc::now(),
     )
-    .execute(&data.db)
+    .fetch_one(&data.db)
     .await
     {
-        Ok(_) => {
+        Ok(result) => {
             info!("Thread \"{}\" added successfully", body.name);
-            Ok(HttpResponse::Ok())
+            Ok(HttpResponse::Created().json(result))
         }
         Err(err) => {
             error!("{err}");
@@ -36,22 +37,16 @@ async fn add_thread(
 }
 
 #[get("")]
-async fn get_last_n_threads(
+async fn get_threads(
     data: web::Data<SharedState>,
-    body: web::Json<GetNThreadsRequest>,
+    query: web::Query<Filter>,
 ) -> Result<impl Responder> {
-    let query_result = match sqlx::query_as!(
-        Thread,
-        "SELECT * FROM threads ORDER BY created_at LIMIT $1;",
-        body.n
-    )
-    .fetch_all(&data.db)
-    .await
-    {
+    let query_string = query.prepare_query("threads".to_string());
+    let query_result: Vec<Thread> = match sqlx::query_as(&query_string).fetch_all(&data.db).await {
         Ok(users) => users,
         Err(err) => {
             error!("{err}");
-            Vec::new()
+            return Err(actix_web::error::ErrorInternalServerError(err));
         }
     };
     Ok(HttpResponse::Ok().json(query_result))
@@ -62,8 +57,7 @@ async fn get_thread_posts(
     id: web::Path<Uuid>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
-    let thread_id =
-        Uuid::parse_str(&id.to_string()).map_err(|e| actix_web::error::ErrorBadRequest(e))?;
+    let thread_id = Uuid::parse_str(&id.to_string()).map_err(actix_web::error::ErrorBadRequest)?;
     let query_result = match sqlx::query_as!(
         Post,
         "SELECT * FROM posts WHERE thread_id=$1 ORDER BY created_at",
@@ -84,7 +78,7 @@ async fn get_thread_posts(
 pub fn thread_service(conf: &mut web::ServiceConfig) {
     let scope = web::scope("api/thread")
         .service(add_thread)
-        .service(get_last_n_threads);
+        .service(get_threads);
 
     conf.service(scope);
 }

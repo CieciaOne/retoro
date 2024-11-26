@@ -2,32 +2,34 @@ use actix_web::{delete, get, post, web, HttpResponse, Responder, Result};
 use chrono::Utc;
 use log::{error, info};
 
+use sqlx::query;
 use uuid::Uuid;
 
+use crate::common::common::Filter;
 use crate::post::model::Post;
-use crate::post::schema::{AddThreadRequest, GetNPostsRequest};
+use crate::post::schema::AddPostRequest;
 use crate::SharedState;
 
 #[post("")]
 async fn add_post(
-    body: web::Json<AddThreadRequest>,
+    body: web::Json<AddPostRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
     match sqlx::query_as!(
         Post,
-        "INSERT INTO posts VALUES($1,$2,$3,$4,$5);",
+        "INSERT INTO posts VALUES($1,$2,$3,$4,$5) RETURNING *;",
         Uuid::new_v4(),
         body.thread_id,
         body.author_id,
         body.content,
         Utc::now(),
     )
-    .execute(&data.db)
+    .fetch_one(&data.db)
     .await
     {
-        Ok(_) => {
+        Ok(post) => {
             info!("Post {} added successfully", body.content);
-            Ok(HttpResponse::Ok())
+            Ok(HttpResponse::Created().json(post))
         }
         Err(err) => {
             error!("{err}");
@@ -37,18 +39,12 @@ async fn add_post(
 }
 
 #[get("")]
-async fn get_last_n_posts(
+async fn get_posts(
     data: web::Data<SharedState>,
-    body: web::Json<GetNPostsRequest>,
+    query: web::Query<Filter>,
 ) -> Result<impl Responder> {
-    let query_result = match sqlx::query_as!(
-        Post,
-        "SELECT * FROM posts ORDER BY created_at LIMIT $1;",
-        body.n
-    )
-    .fetch_all(&data.db)
-    .await
-    {
+    let query_string = query.prepare_query("posts".to_string());
+    let query_result: Vec<Post> = match sqlx::query_as(&query_string).fetch_all(&data.db).await {
         Ok(users) => users,
         Err(err) => {
             error!("{err}");
@@ -76,9 +72,7 @@ async fn delete_post(id: web::Path<Uuid>, data: web::Data<SharedState>) -> Resul
 }
 
 pub fn post_service(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("api/post")
-        .service(add_post)
-        .service(get_last_n_posts);
+    let scope = web::scope("api/post").service(add_post).service(get_posts);
 
     conf.service(scope);
 }
