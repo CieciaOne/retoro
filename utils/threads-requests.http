@@ -1,12 +1,17 @@
 ### add new thread
-POST http://localhost:8080/api/thread
+POST http://localhost:8080/api/threads
 Accept: application/json
 Content-Type: application/json
 
 {
-    "name": "testior"
+    "name": "thread bonitaa  ✨"
 }
 
 ### Get threads
-GET http://localhost:8080/api/thread
+GET http://localhost:8080/api/threads
+Accept: application/json
+
+
+### Delete thread
+DELETE http://localhost:8080/api/threads&id=4fca0810-acc9-4a6f-b1ce-de49e3ae8023
 Accept: application/json

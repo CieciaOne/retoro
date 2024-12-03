@@ -1,0 +1,8 @@
+.thread-selector {
+    max-width: 15rem;
+    height: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* width: 10rem; */
+}

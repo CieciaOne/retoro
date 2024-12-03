@@ -1,0 +1,30 @@
+.post {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    margin: 1rem;
+    padding: 0.7rem;
+}
+
+.post-header {
+    display: inline-block;
+}
+
+.author {
+    display: inline-block;
+    margin: 0.5rem;
+}
+
+.author:hover {
+    /* font-style: italic; */
+
+    color: var(--accent);
+}
+
+.tag {
+    display: inline-block;
+    margin: 0.5rem;
+}
+
+.tag:hover {
+    color: var(--accent);
+}

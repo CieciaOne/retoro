@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, sync::Arc};
 mod common;
 mod post;
 mod thread;
@@ -10,6 +10,7 @@ use log::{error, info};
 use post::service::post_service;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use thread::service::thread_service;
+use tokio::sync::Mutex;
 use user::service::user_service;
 use uuid::Uuid;
 
@@ -19,7 +20,7 @@ type SessionId = Uuid;
 #[derive(Clone)]
 pub struct SharedState {
     db: Pool<Postgres>,
-    user_sessions: HashMap<UserId, SessionId>,
+    user_sessions: Arc<Mutex<HashMap<SessionId, UserId>>>,
 }
 
 #[tokio::main]
@@ -63,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
             .wrap(cors)
             .app_data(Data::new(SharedState {
                 db: pool.clone(),
-                user_sessions: HashMap::new(),
+                user_sessions: Arc::new(Mutex::new(HashMap::new())),
             }))
             .configure(user_service)
             .configure(post_service)

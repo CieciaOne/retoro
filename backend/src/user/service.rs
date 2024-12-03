@@ -51,15 +51,19 @@ async fn register_user(
     }
 }
 
-#[get("login")]
+#[post("login")]
 async fn login_user(
     body: web::Json<UserAuthRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
+    let d = data.clone();
+    let mut user_sessions = d.user_sessions.lock().await;
     match auth_user(body.name.clone(), body.password.clone(), data.db.clone()).await {
         Ok(user) => {
-            let session_id = uuid::Uuid::new_v4().to_string();
-            let cookie = actix_web::cookie::Cookie::build("session_id", session_id).finish();
+            let session_id = uuid::Uuid::new_v4();
+            let session_id_string = session_id.to_string();
+            let cookie = actix_web::cookie::Cookie::build("session_id", session_id_string).finish();
+            user_sessions.insert(session_id, user.id);
             Ok(HttpResponse::Ok().cookie(cookie).json(user.as_reponse()))
         }
         Err(e) => Err(actix_web::error::ErrorUnauthorized(e)),
@@ -118,6 +122,27 @@ async fn get_users(data: web::Data<SharedState>) -> Result<impl Responder> {
 //     }
 // }
 
+#[post("/auth")]
+async fn auth_session(
+    session: web::Json<Uuid>,
+    data: web::Data<SharedState>,
+) -> Result<impl Responder> {
+    if let Some(user_id) = data.user_sessions.lock().await.get(&session) {
+        match sqlx::query_as!(User, "SELECT * FROM users WHERE(id = $1);", user_id)
+            .fetch_one(&data.db)
+            .await
+        {
+            Ok(user) => return Ok(HttpResponse::Ok().json(user)),
+            Err(_) => {
+                error!("User with id {} does not exist", user_id);
+                Err(actix_web::error::ErrorNotFound("Invalid session"))
+            }
+        }
+    } else {
+        Err(actix_web::error::ErrorNotFound("Invalid session"))
+    }
+}
+
 async fn auth_user(username: String, password: String, db: Pool<Postgres>) -> Result<User, Error> {
     match sqlx::query_as!(User, "SELECT * FROM users WHERE(name LIKE $1);", username)
         .fetch_one(&db)
@@ -145,7 +170,7 @@ async fn auth_user(username: String, password: String, db: Pool<Postgres>) -> Re
 }
 
 pub fn user_service(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("api/user")
+    let scope = web::scope("api/users")
         .service(register_user)
         .service(login_user)
         .service(get_users);

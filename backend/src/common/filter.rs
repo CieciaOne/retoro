@@ -12,9 +12,10 @@ pub struct Filter {
     pub limit: Option<i64>,
 }
 impl Filter {
-    pub fn prepare_query(&self, table: String) -> String {
-        let mut query = format!("SELECT * FROM {table}").to_string();
-
+    /// To use this function pass a sql query e.q. "SELECT name FROM users"
+    /// then it will process all the filters and add them as WHERE clause,
+    /// or LIMIT in case that is present
+    pub fn prepare(&self, mut query: String) -> String {
         // Add WHERE clause if filter is applied
         if self.after.is_some()
             || self.before.is_some()
@@ -32,10 +33,10 @@ impl Filter {
                 conditions.push(format!("created_at <= '{}'", end));
             }
             if let Some(thread) = self.thread {
-                conditions.push(format!("thread_id = {}", thread));
+                conditions.push(format!("thread_id = '{}'", thread));
             }
             if let Some(user) = self.author {
-                conditions.push(format!("author_id = {}", user));
+                conditions.push(format!("author_id = '{}'", user));
             }
 
             for (i, cond) in conditions.iter().enumerate() {
@@ -69,7 +70,7 @@ mod tests {
             limit: None,
         };
         assert_eq!(
-            filter.prepare_query("posts".to_string()),
+            filter.prepare("SELECT * FROM posts".to_string()),
             "SELECT * FROM posts;"
         );
     }
@@ -85,7 +86,7 @@ mod tests {
             limit: None,
         };
         assert_eq!(
-            filter.prepare_query("posts".to_string()),
+            filter.prepare("SELECT * FROM posts".to_string()),
             format!(
                 "SELECT * FROM posts WHERE created_at >= '{}';",
                 start_timestamp.to_string()
@@ -104,7 +105,7 @@ mod tests {
             limit: None,
         };
         assert_eq!(
-            filter.prepare_query("posts".to_string()),
+            filter.prepare("SELECT * FROM posts".to_string()),
             format!(
                 "SELECT * FROM posts WHERE created_at <= '{}';",
                 end_timestamp.to_string()
@@ -123,7 +124,7 @@ mod tests {
             limit: None,
         };
         assert_eq!(
-            filter.prepare_query("posts".to_string()),
+            filter.prepare("SELECT * FROM posts".to_string()),
             format!("SELECT * FROM posts WHERE thread_id = {};", thread)
         );
     }
@@ -139,8 +140,8 @@ mod tests {
             limit: None,
         };
         assert_eq!(
-            filter.prepare_query("posts".to_string()),
-            format!("SELECT * FROM posts WHERE author_id = {};", user)
+            filter.prepare("SELECT * FROM posts".to_string()),
+            format!("SELECT * FROM posts WHERE author_id = '{}';", user)
         );
     }
 
@@ -154,7 +155,7 @@ mod tests {
             limit: Some(10),
         };
         assert_eq!(
-            filter.prepare_query("threads".to_string()),
+            filter.prepare("SELECT * FROM threads".to_string()),
             "SELECT * FROM threads LIMIT 10;"
         );
     }
@@ -174,8 +175,8 @@ mod tests {
             limit: Some(limit),
         };
         assert_eq!(
-            filter.prepare_query("posts".to_string()),
-            format!("SELECT * FROM posts WHERE created_at >= '{start_timestamp}' AND created_at <= '{end_timestamp}' AND thread_id = {thread} AND author_id = {user} LIMIT {limit};")
+            filter.prepare("SELECT * FROM posts".to_string()),
+            format!("SELECT * FROM posts WHERE created_at >= '{start_timestamp}' AND created_at <= '{end_timestamp}' AND thread_id = '{thread}' AND author_id = '{user}' LIMIT {limit};")
         );
     }
 }

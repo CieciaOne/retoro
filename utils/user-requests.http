@@ -1,5 +1,6 @@
+
 ### Register new user
-POST http://localhost:8080/api/user/register
+POST http://localhost:8080/api/users/register
 Accept: application/json
 Content-Type: application/json
 
@@ -9,10 +10,10 @@ Content-Type: application/json
 }
 
 ### Get users
-GET http://localhost:8080/api/user
+GET http://localhost:8080/api/users
 
 ### Login as user
-GET http://localhost:8080/api/user/login
+POST http://localhost:8080/api/users/login
 Accept: application/json
 Content-Type: application/json
 
@@ -22,7 +23,7 @@ Content-Type: application/json
 }
 
 ### Login as user INVALID
-GET http://localhost:8080/api/user/login
+POST http://localhost:8080/api/users/login
 Accept: application/json
 Content-Type: application/json
 
@@ -33,7 +34,7 @@ Content-Type: application/json
 
 
 ### Login as user INVALID
-GET http://localhost:8080/api/user/login
+POST http://localhost:8080/api/users/login
 Accept: application/json
 Content-Type: application/json
 Cookie: 

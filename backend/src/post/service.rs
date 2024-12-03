@@ -5,9 +5,10 @@ use log::{error, info};
 use sqlx::query;
 use uuid::Uuid;
 
-use crate::common::common::Filter;
+use crate::common::filter::Filter;
+use crate::common::id::IdQuery;
 use crate::post::model::Post;
-use crate::post::schema::AddPostRequest;
+use crate::post::schema::{AddPostRequest, PostResponse};
 use crate::SharedState;
 
 #[post("")]
@@ -43,36 +44,41 @@ async fn get_posts(
     data: web::Data<SharedState>,
     query: web::Query<Filter>,
 ) -> Result<impl Responder> {
-    let query_string = query.prepare_query("posts".to_string());
-    let query_result: Vec<Post> = match sqlx::query_as(&query_string).fetch_all(&data.db).await {
-        Ok(users) => users,
-        Err(err) => {
-            error!("{err}");
-            Vec::new()
-        }
-    };
+    let query_string = query.prepare("SELECT posts.id, posts.thread_id, posts.author_id, users.name AS author_name, posts.content, posts.created_at FROM posts INNER JOIN users ON posts.author_id = users.id".to_string());
+
+    let query_result: Vec<PostResponse> =
+        match sqlx::query_as(&query_string).fetch_all(&data.db).await {
+            Ok(users) => users,
+            Err(err) => {
+                error!("{err}");
+                return Err(actix_web::error::ErrorInternalServerError(err));
+            }
+        };
     Ok(HttpResponse::Ok().json(query_result))
 }
 
-#[delete("/{id}")]
-async fn delete_post(id: web::Path<Uuid>, data: web::Data<SharedState>) -> Result<impl Responder> {
-    match sqlx::query_as!(Post, "DELETE FROM posts WHERE id=$1;", id.clone())
+#[delete("")]
+async fn delete(
+    query: web::Query<IdQuery>,
+    data: web::Data<SharedState>,
+) -> Result<impl Responder> {
+    match sqlx::query_as!(Post, "DELETE FROM posts WHERE id=$1;", query.id.clone())
         .execute(&data.db)
         .await
     {
         Ok(_) => {
-            info!("Post {id} deleted successfully");
+            info!("Post {} deleted successfully", query.id);
             Ok(HttpResponse::Ok())
         }
         Err(err) => {
-            error!("Deleting Post {id} failed: {err} ");
+            error!("Deleting Post {} failed: {err}", query.id);
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
 }
 
 pub fn post_service(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("api/post").service(add_post).service(get_posts);
+    let scope = web::scope("api/posts").service(add_post).service(get_posts);
 
     conf.service(scope);
 }

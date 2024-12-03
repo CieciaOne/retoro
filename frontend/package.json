@@ -8,7 +8,8 @@
 	},
 	"dependencies": {
 		"preact": "^10.22.1",
-		"preact-iso": "^2.8.1"
+		"preact-iso": "^2.8.1",
+		"react-markdown": "^9.0.1"
 	},
 	"devDependencies": {
 		"@preact/preset-vite": "^2.9.0",

@@ -1,15 +1,18 @@
-export const ThreadSelector = ({ thread, onSelectThread }) => {
-    const formatedDate = new Date(thread.created_at).toLocaleDateString();
-    return(
-    <div className="thread" onClick={() => onSelectThread(thread.id)}>
-      <h4 onClick={onSelectThread(thread.id)}>{thread.name}</h4>
+interface ThreadSelectorProps {
+  thread: Thread;
+  onSelectThread: (thread: Thread) => void;
+}
+export const ThreadSelector = (props: ThreadSelectorProps) => {
+  // const formatedDate = new Date(thread.created_at).toLocaleDateString();
+  return (
+    <div class="thread" onClick={() => props.onSelectThread(props.thread)}>
+      <h4>{props.thread.name}</h4>
     </div>
   );
-}
-  
-interface Thread{
-    id:  string,
-    name: string,
-    createdAt: Date,
+};
 
+export interface Thread {
+  id: string;
+  name: string;
+  createdAt: Date;
 }
