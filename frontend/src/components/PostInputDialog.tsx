@@ -30,13 +30,14 @@ export function PostInputDialog({ onSubmit }: PostInputDialogProps) {
       <div>
         <label class="switch">
           <input
+            class="standard-checkbox"
             type="checkbox"
             checked={checked}
             onInput={() => setChecked(!checked)}
           />
           Preview
         </label>
-        <button onClick={handleSubmit} class="button-underglow float-right">
+        <button onClick={handleSubmit} class="big standard-button float-right">
           Post
         </button>
       </div>

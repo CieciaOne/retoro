@@ -3,12 +3,12 @@ import { ChangeEvent, useState } from "react";
 import Markdown from "react-markdown";
 import { User } from "./UserPanel";
 
-interface PostInputDialogProps {
+interface UserLoginDialogProps {
   onLogin: (username: string, password: string) => void;
   hidden: boolean;
 }
 
-export function UserLoginDialog(props: PostInputDialogProps) {
+export function UserLoginDialog(props: UserLoginDialogProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 

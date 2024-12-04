@@ -66,7 +66,7 @@
     font-size: large;
 }
 
-.button-underglow {
+.standard-button {
     color: var(--primary-color);
     background-color: transparent;
     border: none;
@@ -76,12 +76,13 @@
     font-style: normal;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
-    text-shadow: 1px 1px 10px var(--accent);
 
 }
 
-.button-underglow:hover {
+.standard-button:hover {
     /* background-color: var(--accent); */
-    color: var(--accent);
+    /* text-shadow: 1px 1px 10px var(--accent); */
+    /* color: var(--accent); */
+    text-decoration: underline;
     font-weight: bold;
 }

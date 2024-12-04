@@ -23,8 +23,6 @@ export function Home() {
 
     if (sessionCookie) {
       const session_id = sessionCookie.split("=")[1];
-      console.log(cookies, sessionCookie);
-
       try {
         const response = await axios.post(
           "http://localhost:8080/api/users/auth",
@@ -56,6 +54,10 @@ export function Home() {
   };
   useEffect(() => {
     checkSession();
+    const interval = setInterval(() => {
+      setRefreshKey((prev) => prev + 1);
+    }, 60000); // 1 min
+    return () => clearInterval(interval); // Clean up interval
   }, []);
 
   const onSelectThread = (thread: Thread) => {
@@ -66,6 +68,7 @@ export function Home() {
   const handleUser = (user: User) => {
     setUser(user);
   };
+
   const onSubmit = (post: string) => {
     const data = {
       thread_id: selectedThread.id,
@@ -88,19 +91,25 @@ export function Home() {
         console.error("Error:", error);
       });
   };
-  console.log("selected thread:", selectedThread);
 
   return (
     <div class="home">
       <div class="sidebar">
         <h2>Retoro</h2>
-        <ThreadList onSelectThread={onSelectThread} />
+        {selectedThread ? (
+          <ThreadList
+            selectedThread={selectedThread.id}
+            onSelectThread={onSelectThread}
+          />
+        ) : (
+          <ThreadList selectedThread={null} onSelectThread={onSelectThread} />
+        )}
         <UserPanel user={user} handleUser={handleUser} />
       </div>
       {selectedThread ? (
         <div class="content">
-          <ThreadView selectedThread={selectedThread} refreshKey={refreshKey} />
           <PostInputDialog onSubmit={onSubmit} />
+          <ThreadView selectedThread={selectedThread} refreshKey={refreshKey} />
         </div>
       ) : (
         <div class="content">

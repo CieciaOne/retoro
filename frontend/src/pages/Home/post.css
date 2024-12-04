@@ -1,8 +1,9 @@
 .post {
     border-radius: 0.5rem;
-    border: 1px solid;
+    border: 2px solid;
     margin: 1rem;
     padding: 0.7rem;
+    /* border-color: var(--primary-color); */
 }
 
 .post-header {
@@ -11,7 +12,8 @@
 
 .author {
     display: inline-block;
-    margin: 0.5rem;
+    margin-top: 0.2rem;
+    margin-bottom: 0.2rem;
 }
 
 .author:hover {

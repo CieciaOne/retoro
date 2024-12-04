@@ -19,6 +19,7 @@
   --primary-color: #222;
   --secondary-color: #f1f1f1;
   --background-color: #fff;
+  accent-color: var(--accent);
 }
 
 body {
@@ -67,6 +68,16 @@ main {
   text-align: center;
   max-height: 100vh;
 }
+
+::-moz-selection {
+  /* Code for Firefox */
+  background: var(--accent);
+}
+
+::selection {
+  background: var(--accent);
+}
+
 
 @media (max-width: 639px) {
   main {

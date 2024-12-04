@@ -6,3 +6,8 @@
     white-space: nowrap;
     /* width: 10rem; */
 }
+
+.selected {
+    /* text-decoration: underline; */
+    color: var(--accent);
+}
