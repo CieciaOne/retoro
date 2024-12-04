@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpResponse, Responder, Result};
+use actix_web::{cookie::time::Duration, get, post, web, HttpResponse, Responder, Result};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
@@ -8,7 +8,7 @@ use log::{debug, error, info};
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::user::schema::UserAuthRequest;
+use crate::user::schema::{SessionAuthRequest, UserAuthRequest};
 use crate::{user::model::User, SharedState};
 
 use super::error::Error;
@@ -56,14 +56,19 @@ async fn login_user(
     body: web::Json<UserAuthRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
-    let d = data.clone();
-    let mut user_sessions = d.user_sessions.lock().await;
     match auth_user(body.name.clone(), body.password.clone(), data.db.clone()).await {
         Ok(user) => {
             let session_id = uuid::Uuid::new_v4();
             let session_id_string = session_id.to_string();
-            let cookie = actix_web::cookie::Cookie::build("session_id", session_id_string).finish();
-            user_sessions.insert(session_id, user.id);
+            let cookie = actix_web::cookie::Cookie::build("session_id", session_id_string)
+                .max_age(Duration::days(3))
+                .path("/")
+                .finish();
+            data.user_sessions.lock().await.insert(session_id, user.id);
+            // debug!("{:?}", user_sessions);
+
+            debug!("userid for session {:?}", data.user_sessions.lock().await);
+
             Ok(HttpResponse::Ok().cookie(cookie).json(user.as_reponse()))
         }
         Err(e) => Err(actix_web::error::ErrorUnauthorized(e)),
@@ -124,15 +129,16 @@ async fn get_users(data: web::Data<SharedState>) -> Result<impl Responder> {
 
 #[post("/auth")]
 async fn auth_session(
-    session: web::Json<Uuid>,
+    body: web::Json<SessionAuthRequest>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
-    if let Some(user_id) = data.user_sessions.lock().await.get(&session) {
+    debug!("Sessions{:?}", data.user_sessions.lock().await);
+    if let Some(user_id) = data.user_sessions.lock().await.get(&body.session_id) {
         match sqlx::query_as!(User, "SELECT * FROM users WHERE(id = $1);", user_id)
             .fetch_one(&data.db)
             .await
         {
-            Ok(user) => return Ok(HttpResponse::Ok().json(user)),
+            Ok(user) => return Ok(HttpResponse::Ok().json(user.as_reponse())),
             Err(_) => {
                 error!("User with id {} does not exist", user_id);
                 Err(actix_web::error::ErrorNotFound("Invalid session"))
@@ -173,7 +179,8 @@ pub fn user_service(conf: &mut web::ServiceConfig) {
     let scope = web::scope("api/users")
         .service(register_user)
         .service(login_user)
-        .service(get_users);
+        .service(get_users)
+        .service(auth_session);
 
     conf.service(scope);
 }

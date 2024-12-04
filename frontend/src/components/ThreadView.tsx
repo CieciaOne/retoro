@@ -5,6 +5,7 @@ import { Thread } from "./ThreadSelctor";
 
 interface ThreadProps {
   selectedThread: Thread;
+  refreshKey: number;
 }
 
 export function ThreadView(props: ThreadProps) {
@@ -31,7 +32,7 @@ export function ThreadView(props: ThreadProps) {
     };
 
     fetchData();
-  }, [props.selectedThread]); // Empty dependency array means this runs once on mount
+  }, [props.selectedThread, props.refreshKey]); // Empty dependency array means this runs once on mount
 
   // Conditional rendering based on state
   if (loading) return <p>Loading...</p>;
@@ -39,14 +40,14 @@ export function ThreadView(props: ThreadProps) {
   if (data == undefined || data.length == 0)
     return (
       <div>
-        <h1>{props.selectedThread.name}</h1>
+        <h2>{props.selectedThread.name}</h2>
         <hr class="secondary" />
         <p>No posts in thread</p>
       </div>
     );
   return (
     <div>
-      <h1>{props.selectedThread.name}</h1>
+      <h2>{props.selectedThread.name}</h2>
       <hr class="secondary" />
 
       {data &&

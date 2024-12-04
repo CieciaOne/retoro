@@ -18,17 +18,26 @@ export const UserPanel = (props: UserPanelProps) => {
     console.log(username, password);
     try {
       setLoading(true); // Start loading
+
       const response = await axios.post(
         "http://localhost:8080/api/users/login",
         {
           name: username,
           password: password,
+        },
+        {
+          withCredentials: true, // Ensures the browser stores the session_id cookie
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
       );
-      props.handleUser(response.data as User);
-      console.log(response.data); // Save the data
+
+      props.handleUser(response.data as User); // Set the logged-in user
+      console.log(response.data); // Log the response data
     } catch (err) {
       setError(err.message); // Save the error
+      console.error("Login error:", err); // Log the error for debugging
     } finally {
       setLoading(false); // End loading
     }

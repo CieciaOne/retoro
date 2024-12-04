@@ -9,6 +9,11 @@ pub struct UserAuthRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SessionAuthRequest {
+    pub session_id: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,

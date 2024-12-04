@@ -44,8 +44,25 @@ async fn get_posts(
     data: web::Data<SharedState>,
     query: web::Query<Filter>,
 ) -> Result<impl Responder> {
-    let query_string = query.prepare("SELECT posts.id, posts.thread_id, posts.author_id, users.name AS author_name, posts.content, posts.created_at FROM posts INNER JOIN users ON posts.author_id = users.id".to_string());
-
+    let query_string = query.prepare(
+        "SELECT 
+            posts.id, 
+            posts.thread_id, 
+            COALESCE(posts.author_id, '00000000-0000-0000-0000-000000000000') AS author_id,
+            CASE 
+                WHEN posts.author_id IS NULL THEN 'Anonymous' 
+                ELSE users.name 
+            END AS author_name,
+            posts.content, 
+            posts.created_at
+        FROM 
+            posts
+        LEFT JOIN 
+            users 
+        ON 
+                posts.author_id = users.id"
+            .to_string(),
+    );
     let query_result: Vec<PostResponse> =
         match sqlx::query_as(&query_string).fetch_all(&data.db).await {
             Ok(users) => users,

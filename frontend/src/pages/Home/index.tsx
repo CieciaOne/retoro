@@ -13,6 +13,50 @@ export function Home() {
   const [selectedThread, setSelectedThread] = useState<Thread>(null);
 
   const [user, setUser] = useState<User>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const checkSession = async () => {
+    const cookies = document.cookie.split("; ");
+    const sessionCookie = cookies.find((cookie) =>
+      cookie.startsWith("session_id=")
+    );
+
+    if (sessionCookie) {
+      const session_id = sessionCookie.split("=")[1];
+      console.log(cookies, sessionCookie);
+
+      try {
+        const response = await axios.post(
+          "http://localhost:8080/api/users/auth",
+          { session_id: session_id },
+          {
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.status === 200) {
+          setUser(response.data); // Set the user with data from the API
+          console.log("User authenticated:", response.data);
+        }
+      } catch (error) {
+        if (error.response && error.response.data === "session timedout") {
+          console.error("Session timed out. Removing cookie.");
+          // Remove session_id cookie
+          document.cookie =
+            "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          setUser(null); // Ensure user is logged out
+        } else {
+          console.error("Error during authentication:", error.message);
+        }
+      }
+    }
+  };
+  useEffect(() => {
+    checkSession();
+  }, []);
 
   const onSelectThread = (thread: Thread) => {
     setSelectedThread(thread);
@@ -38,6 +82,7 @@ export function Home() {
       })
       .then((response) => {
         console.log("Success:", response.data);
+        setRefreshKey(refreshKey + 1);
       })
       .catch((error) => {
         console.error("Error:", error);
@@ -48,18 +93,20 @@ export function Home() {
   return (
     <div class="home">
       <div class="sidebar">
-        <h2>Threads</h2>
+        <h2>Retoro</h2>
         <ThreadList onSelectThread={onSelectThread} />
         <UserPanel user={user} handleUser={handleUser} />
       </div>
       {selectedThread ? (
         <div class="content">
-          <ThreadView selectedThread={selectedThread} />
+          <ThreadView selectedThread={selectedThread} refreshKey={refreshKey} />
           <PostInputDialog onSubmit={onSubmit} />
         </div>
       ) : (
         <div class="content">
-          <p>No thread selected.</p>
+          <div class="info">
+            <h1>No thread selected.</h1>
+          </div>
         </div>
       )}
     </div>

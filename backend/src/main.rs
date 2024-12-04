@@ -48,6 +48,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     sqlx::migrate!();
+    let user_sessions = Arc::new(Mutex::new(HashMap::new())).clone();
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:5173")
@@ -64,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
             .wrap(cors)
             .app_data(Data::new(SharedState {
                 db: pool.clone(),
-                user_sessions: Arc::new(Mutex::new(HashMap::new())),
+                user_sessions: user_sessions.clone(),
             }))
             .configure(user_service)
             .configure(post_service)
