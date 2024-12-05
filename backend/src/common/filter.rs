@@ -71,7 +71,7 @@ mod tests {
         };
         assert_eq!(
             filter.prepare("SELECT * FROM posts".to_string()),
-            "SELECT * FROM posts;"
+            "SELECT * FROM posts ORDER BY created_at DESC;"
         );
     }
 
@@ -88,7 +88,7 @@ mod tests {
         assert_eq!(
             filter.prepare("SELECT * FROM posts".to_string()),
             format!(
-                "SELECT * FROM posts WHERE created_at >= '{}';",
+                "SELECT * FROM posts WHERE created_at >= '{}' ORDER BY created_at DESC;",
                 start_timestamp.to_string()
             )
         );
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(
             filter.prepare("SELECT * FROM posts".to_string()),
             format!(
-                "SELECT * FROM posts WHERE created_at <= '{}';",
+                "SELECT * FROM posts WHERE created_at <= '{}' ORDER BY created_at DESC;",
                 end_timestamp.to_string()
             )
         );
@@ -125,7 +125,10 @@ mod tests {
         };
         assert_eq!(
             filter.prepare("SELECT * FROM posts".to_string()),
-            format!("SELECT * FROM posts WHERE thread_id = {};", thread)
+            format!(
+                "SELECT * FROM posts WHERE thread_id = '{}' ORDER BY created_at DESC;",
+                thread
+            )
         );
     }
 
@@ -141,7 +144,10 @@ mod tests {
         };
         assert_eq!(
             filter.prepare("SELECT * FROM posts".to_string()),
-            format!("SELECT * FROM posts WHERE author_id = '{}';", user)
+            format!(
+                "SELECT * FROM posts WHERE author_id = '{}' ORDER BY created_at DESC;",
+                user
+            )
         );
     }
 
@@ -156,7 +162,7 @@ mod tests {
         };
         assert_eq!(
             filter.prepare("SELECT * FROM threads".to_string()),
-            "SELECT * FROM threads LIMIT 10;"
+            "SELECT * FROM threads LIMIT 10 ORDER BY created_at DESC;"
         );
     }
 
@@ -176,7 +182,7 @@ mod tests {
         };
         assert_eq!(
             filter.prepare("SELECT * FROM posts".to_string()),
-            format!("SELECT * FROM posts WHERE created_at >= '{start_timestamp}' AND created_at <= '{end_timestamp}' AND thread_id = '{thread}' AND author_id = '{user}' LIMIT {limit};")
+            format!("SELECT * FROM posts WHERE created_at >= '{start_timestamp}' AND created_at <= '{end_timestamp}' AND thread_id = '{thread}' AND author_id = '{user}' LIMIT {limit} ORDER BY created_at DESC;")
         );
     }
 }
