@@ -1,0 +1,22 @@
+.thread-selector {
+    max-height: 80%;
+    overflow-y: scroll;
+    text-overflow: ellipsis;
+    width: 100%;
+    flex: 1;
+
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.thread-selector::-webkit-scrollbar {
+    display: none;
+}
+
+
+.selected {
+    text-decoration: underline;
+    color: var(--accent);
+}

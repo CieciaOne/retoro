@@ -1,0 +1,18 @@
+### Register new user
+POST http://localhost:8080/api/posts
+Accept: application/json
+Content-Type: application/json
+
+{
+    "thread_id": "802da517-dde5-401e-a047-3d5dc840c01a",
+    "author_id": "08e1fbb3-65b1-447b-93f6-1c8dd31c6b39",
+    "content": "**TEST** \n# some post test."
+}
+
+### Get posts
+GET http://localhost:8080/api/posts?thread=c7d0db50-f925-4c4f-8247-c82f3da11b88
+Accept: application/json
+
+### Get posts
+GET http://localhost:8080/api/posts
+Accept: application/json

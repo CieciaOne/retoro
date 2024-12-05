@@ -1,0 +1,43 @@
+
+### Register new user
+POST http://localhost:8080/api/users/register
+Accept: application/json
+Content-Type: application/json
+
+{
+    "name": "krzys",
+    "password": "krzysztofpass"
+}
+
+### Get users
+GET http://localhost:8080/api/users
+
+### Login as user
+POST http://localhost:8080/api/users/login
+Accept: application/json
+Content-Type: application/json
+
+{
+    "name": "krzys",
+    "password": "krzysztofpass"
+}
+
+### Login as user INVALID
+POST http://localhost:8080/api/users/login
+Accept: application/json
+Content-Type: application/json
+
+{
+    "name": "krzys",
+    "password": "wrongpass"
+}
+
+
+### Auth with session_id
+POST http://localhost:8080/api/users/auth
+Accept: application/json
+Content-Type: application/json
+
+{
+    "session_id": "cddfea93-479e-4f51-9b5f-77b92762c53c"
+}

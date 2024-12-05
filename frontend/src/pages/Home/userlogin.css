@@ -1,0 +1,66 @@
+.standard-dialog {
+    border-radius: 0.5rem;
+    padding: 0.7rem;
+    border: 1px solid;
+    position: fixed;
+    background-color: var(--background-color);
+    display: block;
+    top: 50%;
+    left: 50%;
+    text-align: center;
+    margin-top: -4rem;
+    margin-left: -10rem;
+    width: 20rem;
+}
+
+
+.standard-input {
+    border: none;
+    border-radius: 0.5rem;
+    outline: none;
+    margin: 0.5rem;
+
+    padding: 0.7rem;
+    background-color: var(--secondary-color);
+
+    font-size: larger;
+    font-family: "Funnel Display", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+.small-input {
+    border: none;
+    border-radius: 0.5rem;
+    outline: none;
+    margin: 0.5rem;
+
+    padding: 0.7rem;
+    background-color: var(--secondary-color);
+
+    font-size: smaller;
+    font-family: "Funnel Display", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+
+.user-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--background-color);
+
+}
+
+.inline-block {
+    display: inline-block;
+    margin-top: 0.1rem;
+}

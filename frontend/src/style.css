@@ -1,0 +1,74 @@
+:root {
+  /* line-height: 1.1; */
+  font-family: "Funnel Display", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+
+  color: var(--primary-color);
+  background-color: var(--background-color);
+
+  --accent: #d298b8;
+  --primary-color: #222;
+  --secondary-color: #f1f1f1;
+  --background-color: #fff;
+  accent-color: var(--accent);
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+}
+
+main {
+  flex: auto;
+  display: flex;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
+  max-height: 100vh;
+}
+
+::-moz-selection {
+  /* Code for Firefox */
+  background: var(--accent);
+}
+
+::selection {
+  background: var(--accent);
+}
+
+
+@media (max-width: 639px) {
+  main {
+    margin: 0 0 0 0;
+  }
+
+  .home {
+    margin: 0 0 0 0;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #ccc;
+    --secondary-color: #111111;
+    --background-color: #000;
+  }
+}

@@ -1,2 +1,2 @@
 # retoro
-decentralized communications
+Self hosted solution for anonymous forum
