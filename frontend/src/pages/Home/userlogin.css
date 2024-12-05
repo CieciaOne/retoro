@@ -1,7 +1,7 @@
 .standard-dialog {
-    border-radius: 0.5rem;
+    /* border-radius: 0.5rem; */
     padding: 0.7rem;
-    border: 1px solid;
+    border: 1px solid var(--primary-color);
     position: fixed;
     background-color: var(--background-color);
     display: block;
@@ -16,18 +16,19 @@
 
 .standard-input {
     border: none;
-    border-radius: 0.5rem;
-    outline: none;
+    border-left: 2px solid var(--accent);
+    border-bottom: 2px solid var(--secondary-color);
     margin: 0.5rem;
 
     padding: 0.7rem;
-    background-color: var(--secondary-color);
+    background-color: var(--background-color);
 
-    font-size: larger;
     font-family: "Funnel Display", sans-serif;
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;
+
+    min-width: 15rem;
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;

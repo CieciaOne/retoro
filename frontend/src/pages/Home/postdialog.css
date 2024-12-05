@@ -1,22 +1,12 @@
-.post-input-dialog {
-    border-radius: 0.5rem;
-    margin: 1rem;
-    padding: 0.5rem;
-    border: 1px solid;
-}
-
-
 .post-input-area {
     border: none;
-    border-radius: 0.5rem;
     outline: none;
     width: 100%;
     box-sizing: border-box;
 
     height: 100%;
-
-    padding: 0.7rem;
-    background-color: var(--secondary-color);
+    background-color: var(--background-color);
+    resize: vertical;
 
     font-size: larger;
     font-family: "Funnel Display", sans-serif;
@@ -36,7 +26,6 @@
     height: 100%;
 
     padding: 0.7rem;
-    background-color: var(--secondary-color);
     font-family: "Funnel Display", sans-serif;
     font-optical-sizing: auto;
     font-weight: 400;
