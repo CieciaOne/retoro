@@ -10,9 +10,6 @@ pub struct AddThreadRequest {
 pub struct GetNThreadsRequest {
     pub n: i64,
 }
-pub struct GetThreadPosts {
-    pub thread: Uuid,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeletePostSchema {

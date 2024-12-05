@@ -96,43 +96,6 @@ async fn get_users(data: web::Data<SharedState>) -> Result<impl Responder> {
     Ok(HttpResponse::Ok().json(query_result))
 }
 
-// #[delete("/{id}")]
-// async fn delete_user(
-//     id: web::Path<Uuid>,
-//     req: HttpRequest,
-//     body: UserAuthRequest,
-//     data: web::Data<SharedState>,
-// ) -> Result<impl Responder> {
-//     // if let Some(session_id) = req.cookie("session_id") {
-//     if data.user_sessions.get(&id).is_some_and(|session| {
-//         req.cookie("session_id")
-//             .is_some_and(|s| s.to_string() == session.to_string())
-//     }) {
-//         match auth_user(body.name, body.password, data.db.clone()).await {
-//             Ok(user) => {
-//                 match sqlx::query_as!(User, "DELETE FROM users WHERE id=$1;", user.id.clone())
-//                     .execute(&data.db)
-//                     .await
-//                 {
-//                     Ok(_) => {
-//                         info!("User {id} deleted successfully");
-//                         return Ok(HttpResponse::Ok());
-//                     }
-//                     Err(err) => {
-//                         error!("Deleting user {id} failed: {err} ");
-//                         return Err(actix_web::error::ErrorInternalServerError(err));
-//                     }
-//                 }
-//             }
-//             Err(err) => return Err(actix_web::error::ErrorForbidden(err)),
-//         }
-//     } else {
-//         return Err(actix_web::error::ErrorForbidden(
-//             "Missing session cookie, user isn't logged in.",
-//         ));
-//     }
-// }
-
 #[post("/auth")]
 async fn auth_session(
     body: web::Json<SessionAuthRequest>,
@@ -144,7 +107,7 @@ async fn auth_session(
             .fetch_one(&data.db)
             .await
         {
-            Ok(user) => return Ok(HttpResponse::Ok().json(user.as_reponse())),
+            Ok(user) => Ok(HttpResponse::Ok().json(user.as_reponse())),
             Err(_) => {
                 error!("User with id {} does not exist", user_id);
                 Err(actix_web::error::ErrorNotFound("Invalid session"))

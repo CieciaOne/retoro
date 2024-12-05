@@ -33,18 +33,6 @@ Content-Type: application/json
 }
 
 
-### Login as user INVALID
-POST http://localhost:8080/api/users/login
-Accept: application/json
-Content-Type: application/json
-Cookie: 
-
-{
-    "name": "krzys",
-    "password": "wrongpass"
-}
-
-
 ### Auth with session_id
 POST http://localhost:8080/api/users/auth
 Accept: application/json

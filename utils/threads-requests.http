@@ -4,7 +4,7 @@ Accept: application/json
 Content-Type: application/json
 
 {
-    "name": "thread bonitaa  ✨"
+    "name": "example thread✨"
 }
 
 ### Get threads
@@ -13,5 +13,5 @@ Accept: application/json
 
 
 ### Delete thread
-DELETE http://localhost:8080/api/threads&id=4fca0810-acc9-4a6f-b1ce-de49e3ae8023
+DELETE http://localhost:8080/api/threads?id=87aa800e-a63f-49f4-81dd-e7e03dee06ef
 Accept: application/json

@@ -1,6 +1,6 @@
 use actix_web::{delete, get, post, web, HttpResponse, Responder, Result};
 use chrono::Utc;
-use log::{error, info};
+use log::{debug, error, info};
 
 use uuid::Uuid;
 
@@ -54,13 +54,18 @@ async fn delete(
     query: web::Query<IdQuery>,
     data: web::Data<SharedState>,
 ) -> Result<impl Responder> {
-    match sqlx::query_as!(Post, "DELETE FROM threads WHERE id=$1;", query.id.clone())
-        .execute(&data.db)
-        .await
+    debug!("{}", query.id);
+    match sqlx::query_as!(
+        Thread,
+        "DELETE FROM threads WHERE id=$1 RETURNING *;",
+        query.id.clone()
+    )
+    .fetch_one(&data.db)
+    .await
     {
-        Ok(_) => {
+        Ok(thread) => {
             info!("Post {} deleted successfully", query.id);
-            Ok(HttpResponse::Ok())
+            Ok(HttpResponse::Ok().json(thread))
         }
         Err(err) => {
             error!("Deleting Post {} failed: {err}", query.id);
@@ -68,28 +73,6 @@ async fn delete(
         }
     }
 }
-// #[get("/{id}")]
-// async fn get_thread_posts(
-//     id: web::Path<Uuid>,
-//     data: web::Data<SharedState>,
-// ) -> Result<impl Responder> {
-//     let thread_id = Uuid::parse_str(&id.to_string()).map_err(actix_web::error::ErrorBadRequest)?;
-//     let query_result = match sqlx::query_as!(
-//         Post,
-//         "SELECT * FROM posts WHERE thread_id=$1 ORDER BY created_at",
-//         thread_id
-//     )
-//     .fetch_all(&data.db)
-//     .await
-//     {
-//         Ok(users) => users,
-//         Err(err) => {
-//             error!("{err}");
-//             Vec::new()
-//         }
-//     };
-//     Ok(HttpResponse::Ok().json(query_result))
-// }
 
 pub fn thread_service(conf: &mut web::ServiceConfig) {
     let scope = web::scope("api/threads")

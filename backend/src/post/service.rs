@@ -2,7 +2,6 @@ use actix_web::{delete, get, post, web, HttpResponse, Responder, Result};
 use chrono::Utc;
 use log::{error, info};
 
-use sqlx::query;
 use uuid::Uuid;
 
 use crate::common::filter::Filter;

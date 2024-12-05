@@ -6,7 +6,7 @@ Content-Type: application/json
 {
     "thread_id": "802da517-dde5-401e-a047-3d5dc840c01a",
     "author_id": "08e1fbb3-65b1-447b-93f6-1c8dd31c6b39",
-    "content": "**asdf** \n# some random post test post2\nasddsaf\n- asdf\n- awdsf"
+    "content": "**TEST** \n# some post test."
 }
 
 ### Get posts
