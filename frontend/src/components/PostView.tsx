@@ -13,7 +13,7 @@ export function PostView(props: PostProps) {
         }`}</h4>
         <h6 class="datetime">{formatedDate}</h6>
       </div>
-      <hr />
+      <hr class="secondary" />
       <div>
         <Markdown>{props.post.content}</Markdown>
       </div>

@@ -1,8 +1,9 @@
 .post {
-    border-radius: 0.5rem;
-    border: 2px solid;
-    margin: 1rem;
+    border-left: 2px solid;
+    border-color: var(--accent);
+    margin-top: 1rem;
     padding: 0.7rem;
+    padding-right: 0;
 }
 
 .post-header {
