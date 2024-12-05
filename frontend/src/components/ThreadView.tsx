@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "preact/hooks";
-import { Post } from "./Post";
+import { Post, PostView } from "./PostView";
 import { Thread } from "./ThreadSelctor";
 
 interface ThreadProps {
@@ -30,7 +30,6 @@ export function ThreadView(props: ThreadProps) {
   };
   useEffect(() => {
     fetchPosts();
-    console.log("refreshin posts");
   }, [props.selectedThread, props.refreshKey]); // Empty dependency array means this runs once on mount
 
   // Conditional rendering based on state
@@ -51,7 +50,7 @@ export function ThreadView(props: ThreadProps) {
 
       {posts &&
         posts.map((post) => {
-          return <Post post={post} />;
+          return <PostView post={post as Post} />;
         })}
     </div>
   );

@@ -1,0 +1,34 @@
+name: Frontend
+
+on: [pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt-frontend:
+    name: Frontend Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install Dependencies
+        run: cd frontend && npm install
+      - name: Enforce Frontend Formatting
+        run: cd frontend && npm run format:check # Use your script for formatting (e.g., Prettier or ESLint)
+  build-frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install Dependencies
+        run: cd frontend && npm install
+      - name: Build Frontend
+        run: cd frontend && npm run build

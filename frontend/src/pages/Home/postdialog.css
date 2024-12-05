@@ -11,6 +11,8 @@
     border-radius: 0.5rem;
     outline: none;
     width: 100%;
+    box-sizing: border-box;
+
     height: 100%;
 
     padding: 0.7rem;
@@ -50,13 +52,6 @@
 }
 
 
-.post-input-navi {
-    padding: 0.7rem;
-    border-radius: 0.5rem;
-    border: none;
-    display: block
-}
-
 .float-right {
     float: right;
 }
@@ -85,4 +80,8 @@
     /* color: var(--accent); */
     text-decoration: underline;
     font-weight: bold;
+}
+
+.standard-button:active {
+    color: var(--accent);
 }

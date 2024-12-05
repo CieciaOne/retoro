@@ -49,7 +49,7 @@ impl Filter {
         if let Some(limit) = self.limit {
             query.push_str(&format!(" LIMIT {}", limit));
         }
-        query.push_str(";");
+        query.push_str(" ORDER BY created_at DESC;");
         debug!("{}", query);
         query
     }

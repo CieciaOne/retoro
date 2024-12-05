@@ -17,8 +17,6 @@
 }
 
 .author:hover {
-    /* font-style: italic; */
-
     color: var(--accent);
 }
 

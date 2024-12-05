@@ -2,7 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import preactLogo from "../../assets/preact.svg";
 import "./style.css";
 import { Thread, ThreadSelector } from "../../components/ThreadSelctor";
-import { Post } from "../../components/Post";
+import { Post } from "../../components/PostView";
 import { ThreadList } from "../../components/ThreadList";
 import { ThreadView } from "../../components/ThreadView";
 import { PostInputDialog } from "../../components/PostInputDialog";
@@ -52,8 +52,20 @@ export function Home() {
       }
     }
   };
+
+  function initializeTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+
+    const theme = savedTheme || (prefersDark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  }
+
   useEffect(() => {
     checkSession();
+    initializeTheme();
     const interval = setInterval(() => {
       setRefreshKey((prev) => prev + 1);
     }, 60000); // 1 min
@@ -95,7 +107,10 @@ export function Home() {
   return (
     <div class="home">
       <div class="sidebar">
-        <h2>Retoro</h2>
+        <div>
+          <h2>Retoro</h2>
+          <hr class="secondary" />
+        </div>
         {selectedThread ? (
           <ThreadList
             selectedThread={selectedThread.id}
@@ -108,6 +123,8 @@ export function Home() {
       </div>
       {selectedThread ? (
         <div class="content">
+          <h2>{selectedThread.name}</h2>
+          <hr class="secondary" />
           <PostInputDialog onSubmit={onSubmit} />
           <ThreadView selectedThread={selectedThread} refreshKey={refreshKey} />
         </div>

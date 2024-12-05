@@ -42,7 +42,16 @@ async fn register_user(
     {
         Ok(user) => {
             info!("User {} registered successfully", body.name);
-            Ok(HttpResponse::Created().json(user.as_reponse()))
+            let session_id = uuid::Uuid::new_v4();
+            let session_id_string = session_id.to_string();
+            let cookie = actix_web::cookie::Cookie::build("session_id", session_id_string)
+                .max_age(Duration::days(3))
+                .path("/")
+                .finish();
+            data.user_sessions.lock().await.insert(session_id, user.id);
+            Ok(HttpResponse::Created()
+                .cookie(cookie)
+                .json(user.as_reponse()))
         }
         Err(err) => {
             error!("{err}");
@@ -65,9 +74,6 @@ async fn login_user(
                 .path("/")
                 .finish();
             data.user_sessions.lock().await.insert(session_id, user.id);
-            // debug!("{:?}", user_sessions);
-
-            debug!("userid for session {:?}", data.user_sessions.lock().await);
 
             Ok(HttpResponse::Ok().cookie(cookie).json(user.as_reponse()))
         }

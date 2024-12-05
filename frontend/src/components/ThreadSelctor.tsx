@@ -27,5 +27,6 @@ export const ThreadSelector = (props: ThreadSelectorProps) => {
 export interface Thread {
   id: string;
   name: string;
-  createdAt: Date;
+  created_at: Date;
+  last_active: Date;
 }

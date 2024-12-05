@@ -3,19 +3,20 @@ import { ChangeEvent, useState } from "react";
 import Markdown from "react-markdown";
 import { User } from "./UserPanel";
 
-interface UserLoginDialogProps {
-  onLogin: (username: string, password: string) => void;
+interface UserRegisterDialogProps {
+  onRegister: (username: string, password: string) => void;
   hidden: boolean;
 }
 
-export function UserLoginDialog(props: UserLoginDialogProps) {
+export function UserRegisterDialog(props: UserRegisterDialogProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordRepeat, setPasswordRepeat] = useState("");
 
   return (
     <div hidden={props.hidden}>
       <div class="standard-dialog">
-        <h2>Log-in:</h2>
+        <h2>Register:</h2>
         <label class="login">
           <input
             class="standard-input"
@@ -40,13 +41,28 @@ export function UserLoginDialog(props: UserLoginDialogProps) {
           />
         </label>
         <br />
+        <label class="password">
+          <input
+            class="standard-input"
+            type="password"
+            value={passwordRepeat}
+            onInput={(event) => {
+              setPasswordRepeat(event.currentTarget.value);
+            }}
+            placeholder={"Repeat your very secure password..."}
+          />
+        </label>
         <button
           onClick={() => {
-            props.onLogin(username, password);
+            if (password == passwordRepeat)
+              props.onRegister(username, password);
+            else {
+              alert("Passwords don't match");
+            }
           }}
           class="standard-button big"
         >
-          Login
+          Register
         </button>
       </div>
     </div>

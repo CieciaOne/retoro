@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "preact/hooks";
 import { Thread, ThreadSelector } from "./ThreadSelctor";
+import { ThreadInputDialog } from "./ThreadInputDialog";
 
 interface ThreadListProps {
   onSelectThread: (thread: Thread) => void;
@@ -8,10 +9,14 @@ interface ThreadListProps {
 }
 export const ThreadList = (props: ThreadListProps) => {
   const [threads, setThreads] = useState(null);
+  const [addThreadHidden, setAddThreadHidden] = useState(true);
   const [threadsRefreshKey, setThreadsRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const toggleAddThread = () => {
+    setAddThreadHidden(!addThreadHidden);
+  };
   const fetchThreads = async () => {
     try {
       setLoading(true); // Start loading
@@ -43,7 +48,12 @@ export const ThreadList = (props: ThreadListProps) => {
   if (error) return <p>Error: {error}</p>;
   return (
     <div class="thread-selector">
-      <hr class="secondary" />
+      <button
+        onClick={() => toggleAddThread()}
+        class="big accent standard-button"
+      >
+        Add thread
+      </button>
       {threads.map((thread: Thread) => {
         return (
           <ThreadSelector
@@ -53,6 +63,12 @@ export const ThreadList = (props: ThreadListProps) => {
           />
         );
       })}
+      <ThreadInputDialog
+        selectThread={props.onSelectThread}
+        refreshThreads={() => setThreadsRefreshKey((prev) => prev + 1)}
+        hidden={addThreadHidden}
+        toggleHidden={toggleAddThread}
+      />
       {/* <NewThread */}
     </div>
   );

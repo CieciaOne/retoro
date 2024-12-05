@@ -1,13 +1,24 @@
 .thread-selector {
-    max-width: 15rem;
-    height: 90%;
-    overflow: hidden;
+    /* max-width: 15rem; */
+    max-height: 80%;
+    overflow-y: scroll;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    /* width: 10rem; */
+    /* white-space: nowrap; */
+    width: 100%;
+    flex: 1;
+
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
 }
 
+.thread-selector::-webkit-scrollbar {
+    display: none;
+}
+
+
 .selected {
-    /* text-decoration: underline; */
+    text-decoration: underline;
     color: var(--accent);
 }

@@ -7,32 +7,28 @@ interface UserOptionsDialogProps {
   user: User;
   handleUser: (user: User) => void;
   hidden: boolean;
+  toggleHidden: () => void;
 }
 
 export function UserOptionsDialog(props: UserOptionsDialogProps) {
-  function toggleTheme() {
-    var element = document.body;
-    element.classList.toggle("dark-mode");
-  }
-
   function logout() {
     document.cookie =
       "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
     props.handleUser(null);
+    props.toggleHidden();
   }
 
   return (
     <div hidden={props.hidden}>
-      <div class="login-dialog">
+      <div class="standard-dialog">
         <h2>Options:</h2>
-        <button onClick={() => toggleTheme()} class="standard-button big">
-          Toggle theme
-        </button>
 
-        <button onClick={() => logout()} class="standard-button big">
-          Log out
-        </button>
+        {props.user && (
+          <button onClick={() => logout()} class="standard-button big">
+            Log out
+          </button>
+        )}
       </div>
     </div>
   );

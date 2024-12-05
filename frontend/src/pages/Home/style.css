@@ -21,6 +21,10 @@ img {
 	overflow: hidden
 }
 
+.accent {
+	color: var(--accent);
+}
+
 .secondary {
 	border-color: var(--secondary-color);
 }
@@ -33,7 +37,8 @@ img {
 	flex-direction: column;
 	float: left;
 	height: 100vh;
-	max-width: 10vw;
+	max-width: 15vw;
+	position: relative;
 	text-overflow: ellipsis;
 }
 
@@ -55,12 +60,4 @@ img {
 
 .info {
 	text-align: center;
-}
-
-.standard-checkbox {
-	color: var(--accent);
-	background-color: var(--accent);
-	/* Set background to accent color when checked */
-	border-color: var(--accent);
-	/* Optionally change border color */
 }
