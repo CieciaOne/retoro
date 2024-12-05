@@ -38,14 +38,12 @@ export function ThreadView(props: ThreadProps) {
   if (posts == undefined || posts.length == 0)
     return (
       <div>
-        {/* <h2>{props.selectedThread.name}</h2> */}
         <hr class="secondary" />
         <p>No posts in thread</p>
       </div>
     );
   return (
     <div>
-      {/* <h2>{props.selectedThread.name}</h2> */}
       <hr class="secondary" />
 
       {posts &&

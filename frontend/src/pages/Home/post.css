@@ -3,7 +3,6 @@
     border: 2px solid;
     margin: 1rem;
     padding: 0.7rem;
-    /* border-color: var(--primary-color); */
 }
 
 .post-header {
@@ -20,11 +19,7 @@
     color: var(--accent);
 }
 
-.tag {
+.datetime {
     display: inline-block;
     margin: 0.5rem;
-}
-
-.tag:hover {
-    color: var(--accent);
 }

@@ -69,7 +69,6 @@ export const ThreadList = (props: ThreadListProps) => {
         hidden={addThreadHidden}
         toggleHidden={toggleAddThread}
       />
-      {/* <NewThread */}
     </div>
   );
 };

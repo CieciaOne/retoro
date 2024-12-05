@@ -4,7 +4,6 @@ interface ThreadSelectorProps {
   onSelectThread: (thread: Thread) => void;
 }
 export const ThreadSelector = (props: ThreadSelectorProps) => {
-  // const formatedDate = new Date(thread.created_at).toLocaleDateString();
   return props.selected ? (
     <div
       id={props.thread.id}
