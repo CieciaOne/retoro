@@ -10,21 +10,21 @@ services:
     volumes:
       - progresDB:/data/postgres
     env_file:
-      - .env
+      - backend/.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  build:
-    image: "backend"
+  build-backend:
+    image: backend
     build:
       context: .
-      dockerfile: Dockerfile.build
+      dockerfile: ./Dockerfile-backend.build
     volumes:
-      - ./src:/src
-      - ./Cargo.toml:/Cargo.toml
+      - ./backend/src:/src
+      - ./backend/Cargo.toml:/Cargo.toml
     depends_on:
       - postgres
 
@@ -34,8 +34,22 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
-      - build
+      - build-backend
     environment:
       - DATABASE_URL=postgresql://postgres:password123@postgres:5432/rust_sqlx
+
+  frontend:
+    image: frontend
+    build:
+      context: .
+      dockerfile: ./Dockerfile-frontend.build
+    environment:
+      NODE_ENV: production
+    ports:
+      - 3000:3000
+    depends_on:
+      - backend
+      - postgres
+
 volumes:
   progresDB:
